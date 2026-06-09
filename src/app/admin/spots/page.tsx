@@ -48,6 +48,7 @@ export default function SpotsPage() {
   async function saveSpot() {
     if (!editing) return
     setSaving(true)
+    const cleanPhotos = (editing.photos || [editing.photo_url || '']).map(p => p?.trim()).filter(Boolean) as string[]
     await supabase.from('spots').update({
       nom: editing.nom,
       type: editing.type,
@@ -55,7 +56,8 @@ export default function SpotsPage() {
       budget: editing.budget,
       energie: editing.energie,
       tags: editing.tags,
-      photo_url: editing.photo_url,
+      photo_url: cleanPhotos[0] || null,
+      photos: cleanPhotos.length > 0 ? cleanPhotos : null,
       actif: editing.actif,
       vibe_enrichie: editing.vibe_enrichie,
     }).eq('id', editing.id)
@@ -238,20 +240,49 @@ export default function SpotsPage() {
               />
             </Field>
 
-            <Field label="URL photo">
-              <div className="flex gap-2 items-start">
-                <input
-                  value={editing.photo_url || ''}
-                  onChange={(e) => setEditing({ ...editing, photo_url: e.target.value || null })}
-                  placeholder="https://…"
-                  className="input-style flex-1"
-                />
-                {editing.photo_url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={editing.photo_url} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
+            <div>
+              <label className="text-[#6b6b6b] text-xs mb-1.5 block">Photos (1 à 4 URLs)</label>
+              <div className="flex flex-col gap-2">
+                {(editing.photos && editing.photos.length > 0 ? editing.photos : [editing.photo_url || '']).map((url, i) => (
+                  <div key={i} className="flex gap-2 items-center">
+                    <input
+                      value={url || ''}
+                      onChange={e => {
+                        const next = [...(editing.photos && editing.photos.length > 0 ? editing.photos : [editing.photo_url || ''])]
+                        next[i] = e.target.value
+                        setEditing({ ...editing, photos: next, photo_url: next[0] || null })
+                      }}
+                      placeholder={`URL photo ${i + 1}`}
+                      className="input-style flex-1 text-sm"
+                    />
+                    {url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={url} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                    )}
+                    {(editing.photos || [editing.photo_url || '']).length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = (editing.photos && editing.photos.length > 0 ? editing.photos : [editing.photo_url || '']).filter((_, j) => j !== i)
+                          setEditing({ ...editing, photos: next, photo_url: next[0] || null })
+                        }}
+                        className="text-[#555] hover:text-red-400 text-sm shrink-0"
+                      >✕</button>
+                    )}
+                  </div>
+                ))}
+                {(editing.photos ? editing.photos.length : 1) < 4 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const current = editing.photos && editing.photos.length > 0 ? editing.photos : [editing.photo_url || '']
+                      setEditing({ ...editing, photos: [...current, ''] })
+                    }}
+                    className="text-xs text-[#555] hover:text-[#888] text-left transition-colors py-1"
+                  >+ Ajouter une photo</button>
                 )}
               </div>
-            </Field>
+            </div>
 
             <div className="flex gap-6">
               <label className="flex items-center gap-2 cursor-pointer">

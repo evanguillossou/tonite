@@ -14,6 +14,7 @@ export type Spot = {
   note_google: number | null
   place_id_google: string | null
   photo_url: string | null
+  photos: string[] | null
   actif: boolean
   vibe_enrichie: boolean
   suggestions_count: number

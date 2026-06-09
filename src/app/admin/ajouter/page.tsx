@@ -17,7 +17,7 @@ type FormData = {
   budget: string
   energie: string
   tags: string
-  photo_url: string
+  photos: string[]
   place_id_google: string
   note_google: string
   coordonnees_lat: string
@@ -29,7 +29,7 @@ type FormData = {
 
 const empty: FormData = {
   nom: '', type: 'bar', vibe: '', adresse: '', arrondissement: '',
-  budget: '2', energie: '2', tags: '', photo_url: '', place_id_google: '',
+  budget: '2', energie: '2', tags: '', photos: [''], place_id_google: '',
   note_google: '', coordonnees_lat: '', coordonnees_lng: '', horaires: null,
   actif: true, vibe_enrichie: false,
 }
@@ -43,6 +43,22 @@ export default function AjouterPage() {
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
 
+  function updatePhoto(index: number, value: string) {
+    const next = [...form.photos]
+    next[index] = value
+    setForm({ ...form, photos: next })
+  }
+
+  function addPhoto() {
+    if (form.photos.length >= 4) return
+    setForm({ ...form, photos: [...form.photos, ''] })
+  }
+
+  function removePhoto(index: number) {
+    const next = form.photos.filter((_, i) => i !== index)
+    setForm({ ...form, photos: next.length > 0 ? next : [''] })
+  }
+
   async function handleImport() {
     if (!mapsUrl.trim()) return
     setImporting(true)
@@ -50,27 +66,23 @@ export default function AjouterPage() {
     try {
       const res = await fetch(`/api/places?url=${encodeURIComponent(mapsUrl.trim())}`)
       const data = await res.json()
-      console.log('[Import] réponse API:', data)
-      if (!res.ok) {
-        setImportError(data.error || 'Erreur lors de l\'import')
-        return
-      }
+      if (!res.ok) { setImportError(data.error || 'Erreur lors de l\'import'); return }
       if (!data.place_id_google) {
         setImportError('Lieu introuvable sur Google Places. Essaie l\'URL longue depuis la barre d\'adresse du navigateur.')
         return
       }
       setForm(f => ({
         ...f,
-        nom:              data.nom           || f.nom,
-        adresse:          data.adresse        || f.adresse,
-        arrondissement:   data.arrondissement ? String(data.arrondissement) : f.arrondissement,
-        coordonnees_lat:  data.coordonnees_lat != null ? String(data.coordonnees_lat) : f.coordonnees_lat,
-        coordonnees_lng:  data.coordonnees_lng != null ? String(data.coordonnees_lng) : f.coordonnees_lng,
-        photo_url:        data.photo_url       || f.photo_url,
-        place_id_google:  data.place_id_google || f.place_id_google,
-        note_google:      data.note_google     != null ? String(data.note_google) : f.note_google,
-        budget:           data.budget          != null ? String(data.budget) : f.budget,
-        horaires:         data.horaires        ?? f.horaires,
+        nom:             data.nom            || f.nom,
+        adresse:         data.adresse         || f.adresse,
+        arrondissement:  data.arrondissement  ? String(data.arrondissement) : f.arrondissement,
+        coordonnees_lat: data.coordonnees_lat != null ? String(data.coordonnees_lat) : f.coordonnees_lat,
+        coordonnees_lng: data.coordonnees_lng != null ? String(data.coordonnees_lng) : f.coordonnees_lng,
+        photos:          data.photo_url ? [data.photo_url] : f.photos,
+        place_id_google: data.place_id_google || f.place_id_google,
+        note_google:     data.note_google     != null ? String(data.note_google) : f.note_google,
+        budget:          data.budget          != null ? String(data.budget) : f.budget,
+        horaires:        data.horaires        ?? f.horaires,
       }))
       setMapsUrl('')
     } catch (err) {
@@ -87,23 +99,26 @@ export default function AjouterPage() {
     setSaving(true)
     setError(null)
 
+    const cleanPhotos = form.photos.map(p => p.trim()).filter(Boolean)
+
     const { error } = await supabase.from('spots').insert({
-      nom:              form.nom.trim(),
-      type:             form.type,
-      vibe:             form.vibe.trim() || null,
-      adresse:          form.adresse.trim(),
-      arrondissement:   Number(form.arrondissement),
-      budget:           Number(form.budget),
-      energie:          Number(form.energie),
-      tags:             form.tags.split(',').map(t => t.trim()).filter(Boolean),
-      photo_url:        form.photo_url.trim() || null,
-      place_id_google:  form.place_id_google.trim() || null,
-      note_google:      form.note_google ? Number(form.note_google) : null,
-      coordonnees_lat:  form.coordonnees_lat ? Number(form.coordonnees_lat) : null,
-      coordonnees_lng:  form.coordonnees_lng ? Number(form.coordonnees_lng) : null,
-      horaires:         form.horaires || null,
-      actif:            form.actif,
-      vibe_enrichie:    form.vibe_enrichie,
+      nom:             form.nom.trim(),
+      type:            form.type,
+      vibe:            form.vibe.trim() || null,
+      adresse:         form.adresse.trim(),
+      arrondissement:  Number(form.arrondissement),
+      budget:          Number(form.budget),
+      energie:         Number(form.energie),
+      tags:            form.tags.split(',').map(t => t.trim()).filter(Boolean),
+      photo_url:       cleanPhotos[0] || null,
+      photos:          cleanPhotos.length > 0 ? cleanPhotos : null,
+      place_id_google: form.place_id_google.trim() || null,
+      note_google:     form.note_google ? Number(form.note_google) : null,
+      coordonnees_lat: form.coordonnees_lat ? Number(form.coordonnees_lat) : null,
+      coordonnees_lng: form.coordonnees_lng ? Number(form.coordonnees_lng) : null,
+      horaires:        form.horaires || null,
+      actif:           form.actif,
+      vibe_enrichie:   form.vibe_enrichie,
       suggestions_count: 0,
     })
 
@@ -111,6 +126,8 @@ export default function AjouterPage() {
     if (error) setError(error.message)
     else router.push('/admin/spots')
   }
+
+  const filledPhotos = form.photos.filter(p => p.trim())
 
   return (
     <AdminGuard>
@@ -145,7 +162,7 @@ export default function AjouterPage() {
                 <p className="text-green-400 text-xs font-medium mb-1">✓ Import réussi</p>
                 <p className="text-[#888] text-[11px]">📍 {form.nom} — {form.arrondissement}e arr.</p>
                 <p className="text-[#888] text-[11px]">{form.horaires ? `🕐 Horaires : ${(form.horaires as unknown[]).length} périodes` : '⚠️ Pas d\'horaires Google disponibles'}</p>
-                {form.photo_url && <p className="text-[#888] text-[11px]">📸 Photo récupérée</p>}
+                {filledPhotos.length > 0 && <p className="text-[#888] text-[11px]">📸 {filledPhotos.length} photo{filledPhotos.length > 1 ? 's' : ''} récupérée{filledPhotos.length > 1 ? 's' : ''}</p>}
               </div>
             )}
           </div>
@@ -199,11 +216,40 @@ export default function AjouterPage() {
               <input value={form.tags} onChange={e => setForm({ ...form, tags: e.target.value })} placeholder="cocktails, terrasse, jazz" className="input-style" />
             </Field>
 
-            <Field label="URL photo">
-              <input value={form.photo_url} onChange={e => setForm({ ...form, photo_url: e.target.value })} placeholder="Rempli automatiquement si importé" className="input-style" />
-            </Field>
+            {/* Photos 1 à 4 */}
+            <div>
+              <label className="text-[#6b6b6b] text-xs mb-1.5 block">Photos (1 à 4 URLs)</label>
+              <div className="flex flex-col gap-2">
+                {form.photos.map((url, i) => (
+                  <div key={i} className="flex gap-2 items-center">
+                    <input
+                      value={url}
+                      onChange={e => updatePhoto(i, e.target.value)}
+                      placeholder={`URL photo ${i + 1}`}
+                      className="input-style flex-1 text-sm"
+                    />
+                    {url.trim() && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={url.trim()} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                    )}
+                    {form.photos.length > 1 && (
+                      <button type="button" onClick={() => removePhoto(i)} className="text-[#555] hover:text-red-400 text-sm shrink-0">✕</button>
+                    )}
+                  </div>
+                ))}
+                {form.photos.length < 4 && (
+                  <button
+                    type="button"
+                    onClick={addPhoto}
+                    className="text-xs text-[#555] hover:text-[#888] text-left transition-colors py-1"
+                  >
+                    + Ajouter une photo
+                  </button>
+                )}
+              </div>
+            </div>
 
-            {/* Champs techniques (pré-remplis à l'import) */}
+            {/* Champs techniques */}
             {form.place_id_google && (
               <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-3 flex flex-col gap-1.5">
                 <p className="text-[#444] text-[10px] uppercase tracking-wider mb-1">Données Google (auto)</p>

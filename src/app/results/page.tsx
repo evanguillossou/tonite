@@ -137,6 +137,7 @@ function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void 
     ? spot._distance < 1 ? `${Math.round(spot._distance * 1000)}m` : `${spot._distance.toFixed(1)}km`
     : null
   const status = openStatus(spot.horaires as Period[] | null)
+  const [photoIdx, setPhotoIdx] = useState(0)
 
   // Ferme sur tap overlay
   return (
@@ -159,32 +160,49 @@ function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void 
           paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))',
         }}
       >
-        {/* Photo */}
-        {spot.photo_url ? (
-          <div className="relative w-full h-52 overflow-hidden bg-[#111]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={spot.photo_url}
-              alt={spot.nom}
-              className="w-full h-full object-cover"
-              style={{ filter: 'brightness(0.85)' }}
-            />
-            <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 40%, #141414 100%)' }} />
-            {/* Close */}
-            <button
-              onClick={onClose}
-              className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm"
-              style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)' }}
-            >
-              ✕
-            </button>
-          </div>
-        ) : (
-          <div className="relative h-16 flex items-end justify-end px-4 pb-3"
-            style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.15), rgba(233,30,140,0.1))' }}>
-            <button onClick={onClose} className="text-muted text-sm font-body">✕ Fermer</button>
-          </div>
-        )}
+        {/* Photo / Carousel */}
+        {(() => {
+          const photos = spot.photos && spot.photos.length > 0 ? spot.photos : spot.photo_url ? [spot.photo_url] : []
+          if (photos.length === 0) return (
+            <div className="relative h-16 flex items-end justify-end px-4 pb-3"
+              style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.15), rgba(233,30,140,0.1))' }}>
+              <button onClick={onClose} className="text-muted text-sm font-body">✕ Fermer</button>
+            </div>
+          )
+          return (
+            <div className="relative w-full h-52 overflow-hidden bg-[#111]">
+              <div
+                className="flex h-full transition-transform duration-300 ease-out"
+                style={{ width: `${photos.length * 100}%`, transform: `translateX(-${(photoIdx % photos.length) * (100 / photos.length)}%)` }}
+              >
+                {photos.map((src, i) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img key={i} src={src} alt={spot.nom} className="h-full object-cover flex-shrink-0"
+                    style={{ width: `${100 / photos.length}%`, filter: 'brightness(0.85)' }} />
+                ))}
+              </div>
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 40%, #141414 100%)' }} />
+              <button onClick={onClose} className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm"
+                style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)' }}>✕</button>
+              {photos.length > 1 && (
+                <>
+                  <button onClick={() => setPhotoIdx(i => (i - 1 + photos.length) % photos.length)}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center text-white text-xs"
+                    style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)' }}>‹</button>
+                  <button onClick={() => setPhotoIdx(i => (i + 1) % photos.length)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center text-white text-xs"
+                    style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)' }}>›</button>
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1">
+                    {photos.map((_, i) => (
+                      <span key={i} className="w-1.5 h-1.5 rounded-full transition-all"
+                        style={{ background: i === photoIdx % photos.length ? '#fff' : 'rgba(255,255,255,0.4)' }} />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )
+        })()}
 
         {/* Contenu */}
         <div className="px-5 pt-4 flex flex-col gap-4">
