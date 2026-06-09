@@ -87,6 +87,16 @@ function mapsUrl(spot: Spot) {
 
 type SpotWithDist = Spot & { _distance?: number }
 
+async function shareSpot(spot: Spot) {
+  const url = `${window.location.origin}/spot/${spot.id}`
+  const text = `${spot.nom} — ${spot.vibe || spot.type}, ${spot.arrondissement}e arr.`
+  if (navigator.share) {
+    await navigator.share({ title: spot.nom, text, url })
+  } else {
+    await navigator.clipboard.writeText(url)
+  }
+}
+
 // ── Bottom Sheet ──────────────────────────────────────────────
 function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void }) {
   const distance = spot._distance != null
@@ -210,6 +220,14 @@ function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void 
               style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
             >
               Pas pour moi
+            </button>
+            <button
+              onClick={() => shareSpot(spot)}
+              className="py-3.5 px-4 rounded-full font-display font-medium text-sm text-text transition-all"
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
+              title="Partager"
+            >
+              ↗
             </button>
             <a
               href={mapsUrl(spot)}
