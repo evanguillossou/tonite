@@ -357,6 +357,7 @@ function ResultsContent() {
   const [excludeIds, setExcludeIds] = useState<string[]>([])
   const [error, setError]           = useState<string | null>(null)
   const [activeSpot, setActiveSpot] = useState<SpotWithDist | null>(null)
+  const [openNow, setOpenNow]       = useState(false)
 
   const fetchSpots = useCallback(async (exclude: string[]) => {
     setLoading(true)
@@ -395,7 +396,7 @@ function ResultsContent() {
       </div>
 
       {/* Titre */}
-      <header className="mb-6 fade-up">
+      <header className="mb-5 fade-up">
         <p className="text-[11px] tracking-[0.2em] text-muted uppercase mb-2 font-body">Ce soir pour toi</p>
         <h1 className="font-display font-bold text-2xl text-text">
           {energieLabel} · {budgetLabel(budget)} · {compagnie}
@@ -403,6 +404,26 @@ function ResultsContent() {
         {arr  && <p className="text-muted text-xs mt-1 font-body">{arr}e arrondissement</p>}
         {!arr && lat && lng && <p className="text-muted text-xs mt-1 font-body">Près de toi</p>}
       </header>
+
+      {/* Toggle ouvert maintenant */}
+      <div className="mb-5 fade-up">
+        <button
+          onClick={() => setOpenNow(o => !o)}
+          className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-body font-medium transition-all"
+          style={openNow ? {
+            background: 'rgba(111,207,138,0.15)',
+            border: '1px solid #6fcf8a',
+            color: '#6fcf8a',
+          } : {
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            color: '#666',
+          }}
+        >
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: openNow ? '#6fcf8a' : '#444', display: 'inline-block', flexShrink: 0 }} />
+          Ouvert maintenant
+        </button>
+      </div>
 
       {/* Skeletons */}
       {loading && (
@@ -433,9 +454,19 @@ function ResultsContent() {
 
       {!loading && !error && spots.length > 0 && (
         <div className="flex flex-col gap-4">
-          {spots.map((spot, i) => (
-            <SpotCard key={spot.id} spot={spot} index={i} onTap={() => setActiveSpot(spot)} />
-          ))}
+          {spots
+            .filter(s => !openNow || openStatus(s.horaires as Period[] | null)?.open)
+            .map((spot, i) => (
+              <SpotCard key={spot.id} spot={spot} index={i} onTap={() => setActiveSpot(spot)} />
+            ))}
+          {openNow && spots.filter(s => !openStatus(s.horaires as Period[] | null)?.open).length === spots.length && (
+            <div className="text-center py-8">
+              <p className="text-muted text-sm font-body">Aucun spot ouvert en ce moment dans cette sélection.</p>
+              <button onClick={() => setOpenNow(false)} className="text-xs font-body underline mt-2" style={{ color: '#F195B8' }}>
+                Voir tous les spots
+              </button>
+            </div>
+          )}
         </div>
       )}
 
