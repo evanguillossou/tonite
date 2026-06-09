@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "tonite",
+      "runtimeExecutable": "/usr/local/opt/node@20/bin/npm",
+      "runtimeArgs": ["run", "dev", "--", "--port", "3001"],
+      "port": 3001
+    }
+  ]
+}

@@ -2,26 +2,151 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Variables ── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #0A0A0A;
+  --card: #1A1A1A;
+  --border: #2A2A2A;
+  --text: #F5F5F5;
+  --muted: #666666;
+  --subtle: #333333;
+  --pink: #F195B8;
+  --pink-deep: #D4649A;
+  --grad-from: #F195B8;
+  --grad-to: #D4649A;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ── Base ── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  background-color: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+/* ── Typography ── */
+.font-display { font-family: var(--font-display), sans-serif; }
+.font-body    { font-family: var(--font-body), sans-serif; }
+
+/* ── Gradient accent ── */
+.grad-text {
+  background: linear-gradient(90deg, var(--grad-from), var(--grad-to));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+.grad-bg {
+  background: linear-gradient(135deg, var(--grad-from), var(--grad-to));
 }
+
+.grad-border {
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  box-shadow: 0 0 0 1px rgba(241,149,184,0.4), 0 0 16px rgba(212,100,154,0.2);
+}
+
+/* ── Glass card ── */
+.glass {
+  background: rgba(255,255,255,0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+}
+
+/* ── CTA button ── */
+.btn-cta {
+  background: linear-gradient(135deg, var(--grad-from), var(--grad-to));
+  color: #fff;
+  font-weight: 600;
+  border-radius: 100px;
+  transition: filter 150ms ease, transform 150ms ease;
+  box-shadow: 0 0 32px rgba(241,149,184,0.35);
+}
+.btn-cta:hover  { filter: brightness(1.1); }
+.btn-cta:active { transform: scale(0.97); }
+.btn-cta:disabled {
+  background: var(--subtle);
+  color: var(--muted);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* ── Pill selector ── */
+.pill {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  transition: all 200ms ease;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pill:hover { border-color: var(--subtle); transform: translateY(-2px); }
+.pill.selected {
+  background: rgba(241,149,184,0.12);
+  border-color: transparent;
+  box-shadow: 0 0 0 1px rgba(241,149,184,0.5), 0 0 20px rgba(212,100,154,0.2);
+}
+
+/* ── Pill card (énergie) ── */
+.pill-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  transition: all 200ms ease;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pill-card:hover { border-color: var(--subtle); transform: translateY(-2px); }
+.pill-card.selected {
+  background: rgba(241,149,184,0.1);
+  border-color: transparent;
+  box-shadow: 0 0 0 1px rgba(241,149,184,0.45), 0 0 20px rgba(212,100,154,0.18);
+}
+
+/* ── Input ── */
+.input-style {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: var(--text);
+  font-size: 0.875rem;
+  font-family: var(--font-body), sans-serif;
+  transition: border-color 200ms;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.input-style::placeholder { color: var(--muted); }
+.input-style:focus { border-color: rgba(241,149,184,0.6); }
+
+/* ── Animations ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.fade-up  { animation: fadeUp  400ms ease both; }
+.fade-in  { animation: fadeIn  300ms ease both; }
+
+.delay-1 { animation-delay: 80ms; }
+.delay-2 { animation-delay: 160ms; }
+.delay-3 { animation-delay: 240ms; }
+.delay-4 { animation-delay: 320ms; }
+
+/* ── Safe area ── */
+.pb-safe { padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); }
