@@ -359,13 +359,14 @@ function ResultsContent() {
   const [activeSpot, setActiveSpot] = useState<SpotWithDist | null>(null)
   const [openNow, setOpenNow]       = useState(false)
 
-  const fetchSpots = useCallback(async (exclude: string[]) => {
+  const fetchSpots = useCallback(async (exclude: string[], withOpenNow?: boolean) => {
     setLoading(true)
     setError(null)
     try {
       const params = new URLSearchParams({ energie: String(energie), budget: String(budget), exclude: exclude.join(',') })
       if (lat && lng) { params.set('lat', lat); params.set('lng', lng) }
       if (arr) params.set('arr', arr)
+      if (withOpenNow) params.set('openNow', 'true')
       const res = await fetch(`/api/spots?${params}`)
       if (!res.ok) throw new Error()
       const data = await res.json()
@@ -408,7 +409,12 @@ function ResultsContent() {
       {/* Toggle ouvert maintenant */}
       <div className="mb-5 fade-up">
         <button
-          onClick={() => setOpenNow(o => !o)}
+          onClick={() => {
+            const next = !openNow
+            setOpenNow(next)
+            setExcludeIds([])
+            fetchSpots([], next)
+          }}
           className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-body font-medium transition-all"
           style={openNow ? {
             background: 'rgba(111,207,138,0.15)',
@@ -454,15 +460,13 @@ function ResultsContent() {
 
       {!loading && !error && spots.length > 0 && (
         <div className="flex flex-col gap-4">
-          {spots
-            .filter(s => !openNow || openStatus(s.horaires as Period[] | null)?.open)
-            .map((spot, i) => (
-              <SpotCard key={spot.id} spot={spot} index={i} onTap={() => setActiveSpot(spot)} />
-            ))}
-          {openNow && spots.filter(s => !openStatus(s.horaires as Period[] | null)?.open).length === spots.length && (
+          {spots.map((spot, i) => (
+            <SpotCard key={spot.id} spot={spot} index={i} onTap={() => setActiveSpot(spot)} />
+          ))}
+          {openNow && spots.length === 0 && !loading && (
             <div className="text-center py-8">
-              <p className="text-muted text-sm font-body">Aucun spot ouvert en ce moment dans cette sélection.</p>
-              <button onClick={() => setOpenNow(false)} className="text-xs font-body underline mt-2" style={{ color: '#F195B8' }}>
+              <p className="text-muted text-sm font-body">Aucun spot ouvert en ce moment.</p>
+              <button onClick={() => { setOpenNow(false); fetchSpots([]) }} className="text-xs font-body underline mt-2" style={{ color: '#F195B8' }}>
                 Voir tous les spots
               </button>
             </div>

@@ -7,6 +7,29 @@ export const dynamic = 'force-dynamic'
 // Types qui correspondent vraiment à des bars/clubs nightlife
 const BAR_TYPES = ['bar', 'club', 'cave à cocktails', 'bar à vin', 'bar à bière', 'rooftop']
 
+// Vérifie si un spot est ouvert maintenant (même logique que côté client)
+type Period = { open: { day: number; time: string }; close?: { day: number; time: string } }
+
+function isOpenNow(horaires: unknown): boolean {
+  const periods = horaires as Period[] | null
+  if (!periods || periods.length === 0) return false
+  const now = new Date()
+  const day = now.getDay()
+  const time = now.getHours() * 100 + now.getMinutes()
+  if (periods.length === 1 && !periods[0].close) return true
+  for (const p of periods) {
+    if (!p.close) continue
+    const openDay = p.open.day, closeDay = p.close.day
+    const openTime = parseInt(p.open.time), closeTime = parseInt(p.close.time)
+    if (openDay === closeDay) {
+      if (day === openDay && time >= openTime && time < closeTime) return true
+    } else if (closeDay === (openDay + 1) % 7) {
+      if ((day === openDay && time >= openTime) || (day === closeDay && time < closeTime)) return true
+    }
+  }
+  return false
+}
+
 async function fetchFromArr(
   supabase: ReturnType<typeof createAdminClient>,
   arrList: number[],
@@ -31,7 +54,7 @@ async function fetchFromArr(
     if (filters.excludeClubs) q = q.neq('type', 'club')
     if (filters.preferClubs)  q = q.in('type', ['club', 'bar'])
     if (filters.requirePhoto) q = q.not('photo_url', 'is', null)
-    q = q.limit(15)
+    q = q.limit(30)
     const { data } = await q
     for (const s of data || []) {
       if (!seenIds.has(s.id as string)) {
@@ -48,6 +71,7 @@ export async function GET(req: NextRequest) {
   const energie     = Number(searchParams.get('energie')) || 2
   const budget      = Number(searchParams.get('budget'))  || 2
   const compagnie   = searchParams.get('compagnie') || 'duo'
+  const openNow     = searchParams.get('openNow') === 'true'
   const excludeRaw  = searchParams.get('exclude') || ''
   const excludeIds  = excludeRaw.split(',').filter(Boolean)
   const lat = searchParams.get('lat') ? Number(searchParams.get('lat')) : null
@@ -135,6 +159,12 @@ export async function GET(req: NextRequest) {
     const withPhoto    = collected.filter(s => s.photo_url).sort(() => Math.random() - 0.5)
     const withoutPhoto = collected.filter(s => !s.photo_url).sort(() => Math.random() - 0.5)
     result = [...withPhoto, ...withoutPhoto]
+  }
+
+  // Si openNow : ne garder que les spots ouverts maintenant
+  if (openNow) {
+    const openResults = result.filter(s => isOpenNow(s.horaires))
+    return NextResponse.json(openResults.slice(0, 3))
   }
 
   return NextResponse.json(result.slice(0, 3))
