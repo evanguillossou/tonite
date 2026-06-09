@@ -5,6 +5,40 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { Suspense } from 'react'
 import type { Spot } from '@/types'
 
+// ── Favoris (localStorage) ────────────────────────────────────
+const FAV_KEY = 'tonite_favs'
+
+function loadFavs(): Spot[] {
+  if (typeof window === 'undefined') return []
+  try { return JSON.parse(localStorage.getItem(FAV_KEY) || '[]') } catch { return [] }
+}
+
+function saveFavs(favs: Spot[]) {
+  localStorage.setItem(FAV_KEY, JSON.stringify(favs))
+}
+
+function useFavorites() {
+  const [favs, setFavs] = useState<Spot[]>([])
+  useEffect(() => { setFavs(loadFavs()) }, [])
+
+  function toggle(spot: Spot) {
+    setFavs(prev => {
+      const exists = prev.some(f => f.id === spot.id)
+      const next = exists ? prev.filter(f => f.id !== spot.id) : [...prev, spot]
+      saveFavs(next)
+      return next
+    })
+  }
+
+  function remove(id: string) {
+    setFavs(prev => { const next = prev.filter(f => f.id !== id); saveFavs(next); return next })
+  }
+
+  function isFav(id: string) { return favs.some(f => f.id === id) }
+
+  return { favs, toggle, remove, isFav }
+}
+
 function budgetLabel(b: number) { return '€'.repeat(b) }
 
 // Période Google Places : { open: { day, time }, close: { day, time } }
@@ -251,8 +285,80 @@ function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void 
   )
 }
 
+// ── Panneau Favoris ───────────────────────────────────────────
+function FavsPanel({ favs, onRemove, onClose }: { favs: Spot[]; onRemove: (id: string) => void; onClose: () => void }) {
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="fixed inset-0 z-50 flex flex-col max-w-lg mx-auto"
+        style={{
+          background: '#0e0e0e',
+          animation: 'slideUp 280ms cubic-bezier(0.32,0.72,0,1) both',
+        }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-10 pb-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
+          <div>
+            <h2 className="font-display font-bold text-xl text-text">Mes spots</h2>
+            <p className="text-muted text-xs font-body mt-0.5">{favs.length} mis de côté</p>
+          </div>
+          <button onClick={onClose} className="text-muted text-sm font-body px-3 py-1.5 rounded-full" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+            Fermer
+          </button>
+        </div>
+
+        {/* Liste */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
+          {favs.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center py-20 text-center">
+              <p className="text-muted text-sm font-body">Aucun spot mis de côté.</p>
+              <p className="text-muted text-xs font-body mt-1">Appuie sur ♡ sur une carte pour sauvegarder.</p>
+            </div>
+          ) : favs.map(spot => (
+            <div key={spot.id} className="rounded-2xl overflow-hidden" style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.07)' }}>
+              {spot.photo_url && (
+                <div className="w-full h-28 overflow-hidden bg-[#111]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={spot.photo_url} alt={spot.nom} className="w-full h-full object-cover" style={{ filter: 'brightness(0.8)' }} />
+                </div>
+              )}
+              <div className="p-4 flex flex-col gap-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-display font-bold text-base text-text leading-tight">{spot.nom}</p>
+                    <p className="text-muted text-xs font-body mt-0.5">{spot.arrondissement}e arr. · {'€'.repeat(spot.budget)} · {spot.type}</p>
+                  </div>
+                  <button onClick={() => onRemove(spot.id)} className="text-muted text-lg leading-none mt-0.5 shrink-0">♡</button>
+                </div>
+                {spot.vibe && (
+                  <p className="text-[#888] text-xs italic font-body leading-relaxed line-clamp-2">&ldquo;{spot.vibe}&rdquo;</p>
+                )}
+                <a
+                  href={spot.place_id_google
+                    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spot.nom)}&query_place_id=${spot.place_id_google}`
+                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spot.nom + ' Paris')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2.5 rounded-full text-center text-xs font-display font-semibold mt-1"
+                  style={{ background: 'linear-gradient(135deg,#F195B8,#D4649A)', color: '#0A0A0A' }}
+                >
+                  Y aller →
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ── Carte (cliquable) ─────────────────────────────────────────
-function SpotCard({ spot, index, onTap }: { spot: SpotWithDist; index: number; onTap: () => void }) {
+function SpotCard({ spot, index, onTap, isFav, onFavToggle }: {
+  spot: SpotWithDist; index: number; onTap: () => void
+  isFav: boolean; onFavToggle: (e: React.MouseEvent) => void
+}) {
   const distance = spot._distance != null
     ? spot._distance < 1 ? `${Math.round(spot._distance * 1000)}m` : `${spot._distance.toFixed(1)}km`
     : null
@@ -269,10 +375,17 @@ function SpotCard({ spot, index, onTap }: { spot: SpotWithDist; index: number; o
     >
       {/* Photo miniature si disponible */}
       {spot.photo_url && (
-        <div className="w-full h-32 rounded-xl overflow-hidden -mx-0 bg-[#111]">
+        <div className="relative w-full h-32 rounded-xl overflow-hidden bg-[#111]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={spot.photo_url} alt={spot.nom} className="w-full h-full object-cover"
             style={{ filter: 'brightness(0.8) saturate(1.2)' }} />
+          <button
+            onClick={onFavToggle}
+            className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center text-base transition-all"
+            style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', color: isFav ? '#F195B8' : 'rgba(255,255,255,0.6)' }}
+          >
+            {isFav ? '♥' : '♡'}
+          </button>
         </div>
       )}
 
@@ -295,10 +408,21 @@ function SpotCard({ spot, index, onTap }: { spot: SpotWithDist; index: number; o
             )}
           </div>
         </div>
-        <span className="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium font-body text-white whitespace-nowrap"
-          style={{ background: 'linear-gradient(135deg,#F195B8,#D4649A)' }}>
-          {spot.type}
-        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          {!spot.photo_url && (
+            <button
+              onClick={onFavToggle}
+              className="text-lg leading-none transition-colors"
+              style={{ color: isFav ? '#F195B8' : 'rgba(255,255,255,0.25)' }}
+            >
+              {isFav ? '♥' : '♡'}
+            </button>
+          )}
+          <span className="px-2.5 py-1 rounded-full text-xs font-medium font-body text-white whitespace-nowrap"
+            style={{ background: 'linear-gradient(135deg,#F195B8,#D4649A)' }}>
+            {spot.type}
+          </span>
+        </div>
       </div>
 
       {/* Vibe */}
@@ -358,6 +482,8 @@ function ResultsContent() {
   const [error, setError]           = useState<string | null>(null)
   const [activeSpot, setActiveSpot] = useState<SpotWithDist | null>(null)
   const [openNow, setOpenNow]       = useState(false)
+  const [showFavs, setShowFavs]     = useState(false)
+  const { favs, toggle, remove, isFav } = useFavorites()
 
   const fetchSpots = useCallback(async (exclude: string[], withOpenNow?: boolean) => {
     setLoading(true)
@@ -461,7 +587,12 @@ function ResultsContent() {
       {!loading && !error && spots.length > 0 && (
         <div className="flex flex-col gap-4">
           {spots.map((spot, i) => (
-            <SpotCard key={spot.id} spot={spot} index={i} onTap={() => setActiveSpot(spot)} />
+            <SpotCard
+              key={spot.id} spot={spot} index={i}
+              onTap={() => setActiveSpot(spot)}
+              isFav={isFav(spot.id)}
+              onFavToggle={(e) => { e.stopPropagation(); toggle(spot) }}
+            />
           ))}
           {openNow && spots.length === 0 && !loading && (
             <div className="text-center py-8">
@@ -496,6 +627,25 @@ function ResultsContent() {
 
       {/* Bottom sheet */}
       {activeSpot && <SpotSheet spot={activeSpot} onClose={() => setActiveSpot(null)} />}
+
+      {/* Bouton flottant favoris */}
+      {favs.length > 0 && !activeSpot && !showFavs && (
+        <button
+          onClick={() => setShowFavs(true)}
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-3 rounded-full font-display font-semibold text-sm shadow-xl z-30 transition-all"
+          style={{
+            background: '#0e0e0e',
+            border: '1px solid rgba(241,149,184,0.4)',
+            color: '#F195B8',
+            boxShadow: '0 4px 24px rgba(241,149,184,0.2)',
+          }}
+        >
+          ♥ Mes spots ({favs.length})
+        </button>
+      )}
+
+      {/* Panneau favoris */}
+      {showFavs && <FavsPanel favs={favs} onRemove={remove} onClose={() => setShowFavs(false)} />}
     </main>
   )
 }
