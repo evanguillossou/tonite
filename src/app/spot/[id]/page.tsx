@@ -72,6 +72,11 @@ export default function SpotPage() {
     })
   }, [id])
 
+  function handleBack() {
+    if (window.history.length > 1) router.back()
+    else router.push('/')
+  }
+
   async function handleShare() {
     if (!spot) return
     const url = `${window.location.origin}/spot/${spot.id}`
@@ -112,7 +117,7 @@ export default function SpotPage() {
           <img src={spot.photo_url} alt={spot.nom} className="w-full h-full object-cover" style={{ filter: 'brightness(0.8)' }} />
           <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(10,10,10,0.2) 0%, #0A0A0A 100%)' }} />
           <button
-            onClick={() => router.back()}
+            onClick={handleBack}
             className="absolute top-4 left-4 flex items-center gap-1.5 text-sm font-body text-white px-3 py-1.5 rounded-full"
             style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)' }}
           >
@@ -121,7 +126,7 @@ export default function SpotPage() {
         </div>
       ) : (
         <div className="px-5 pt-10 pb-2">
-          <button onClick={() => router.back()} className="text-muted text-sm font-body">← Retour</button>
+          <button onClick={handleBack} className="text-muted text-sm font-body">← Retour</button>
         </div>
       )}
 
