@@ -58,17 +58,6 @@ function mapsUrl(spot: Spot) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spot.nom + ' Paris')}`
 }
 
-async function shareSpot(spot: Spot) {
-  const url = `${window.location.origin}/spot/${spot.id}`
-  const text = `${spot.nom} — ${spot.vibe || spot.type}, ${spot.arrondissement}e arr.`
-  if (navigator.share) {
-    await navigator.share({ title: spot.nom, text, url })
-  } else {
-    await navigator.clipboard.writeText(url)
-    alert('Lien copié !')
-  }
-}
-
 export default function SpotPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
