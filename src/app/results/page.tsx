@@ -287,68 +287,138 @@ function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void 
 
 // ── Panneau Favoris ───────────────────────────────────────────
 function FavsPanel({ favs, onRemove, onClose }: { favs: Spot[]; onRemove: (id: string) => void; onClose: () => void }) {
+  const [active, setActive] = useState(0)
+  const spot = favs[active]
+  const status = spot ? openStatus(spot.horaires as Period[] | null) : null
+
+  // Si on retire le spot actif, recale l'index
+  useEffect(() => {
+    if (active >= favs.length) setActive(Math.max(0, favs.length - 1))
+  }, [favs.length, active])
+
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <div
         className="fixed inset-0 z-50 flex flex-col max-w-lg mx-auto"
-        style={{
-          background: '#0e0e0e',
-          animation: 'slideUp 280ms cubic-bezier(0.32,0.72,0,1) both',
-        }}
+        style={{ background: '#0e0e0e', animation: 'slideUp 280ms cubic-bezier(0.32,0.72,0,1) both' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-10 pb-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
-          <div>
-            <h2 className="font-display font-bold text-xl text-text">Mes spots</h2>
-            <p className="text-muted text-xs font-body mt-0.5">{favs.length} mis de côté</p>
-          </div>
+        <div className="flex items-center justify-between px-5 pt-10 pb-3">
+          <h2 className="font-display font-bold text-lg text-text">Mes spots</h2>
           <button onClick={onClose} className="text-muted text-sm font-body px-3 py-1.5 rounded-full" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
             Fermer
           </button>
         </div>
 
-        {/* Liste */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
-          {favs.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center py-20 text-center">
-              <p className="text-muted text-sm font-body">Aucun spot mis de côté.</p>
-              <p className="text-muted text-xs font-body mt-1">Appuie sur ♡ sur une carte pour sauvegarder.</p>
-            </div>
-          ) : favs.map(spot => (
-            <div key={spot.id} className="rounded-2xl overflow-hidden" style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.07)' }}>
-              {spot.photo_url && (
-                <div className="w-full h-28 overflow-hidden bg-[#111]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={spot.photo_url} alt={spot.nom} className="w-full h-full object-cover" style={{ filter: 'brightness(0.8)' }} />
+        {/* Onglets scrollables */}
+        <div className="overflow-x-auto pb-1 px-5" style={{ scrollbarWidth: 'none' }}>
+          <div className="flex gap-2 w-max">
+            {favs.map((s, i) => (
+              <button
+                key={s.id}
+                onClick={() => setActive(i)}
+                className="px-3 py-1.5 rounded-full text-xs font-body font-medium whitespace-nowrap transition-all shrink-0"
+                style={i === active ? {
+                  background: '#F195B8',
+                  color: '#0A0A0A',
+                } : {
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: '#888',
+                }}
+              >
+                {s.nom.length > 18 ? s.nom.slice(0, 16) + '…' : s.nom}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Fiche du spot actif */}
+        {spot && (
+          <div className="flex-1 overflow-y-auto">
+            {/* Photo */}
+            {spot.photo_url ? (
+              <div className="relative w-full h-52 overflow-hidden bg-[#111] mt-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={spot.photo_url} alt={spot.nom} className="w-full h-full object-cover" style={{ filter: 'brightness(0.85)' }} />
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 50%, #0e0e0e 100%)' }} />
+              </div>
+            ) : (
+              <div className="h-4" />
+            )}
+
+            <div className="px-5 pt-4 pb-10 flex flex-col gap-4">
+              {/* Titre */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-display font-bold text-xl text-text leading-tight">{spot.nom}</h3>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <span className="text-muted text-xs font-body">{spot.arrondissement}e arr.</span>
+                    <span className="text-[#333] text-xs">·</span>
+                    <span className="text-muted text-xs font-body">{'€'.repeat(spot.budget)}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => onRemove(spot.id)}
+                    className="text-base leading-none transition-colors"
+                    style={{ color: '#F195B8' }}
+                    title="Retirer des favoris"
+                  >
+                    ♥
+                  </button>
+                  <span className="px-2.5 py-1 rounded-full text-xs font-medium font-body text-white"
+                    style={{ background: 'linear-gradient(135deg,#F195B8,#D4649A)' }}>
+                    {spot.type}
+                  </span>
+                </div>
+              </div>
+
+              {/* Vibe */}
+              {spot.vibe && (
+                <p className="text-[#aaa] text-sm italic font-body leading-relaxed">&ldquo;{spot.vibe}&rdquo;</p>
+              )}
+
+              {/* Adresse + horaires */}
+              <div className="flex flex-col gap-1.5 py-3 border-y" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
+                {spot.adresse && (
+                  <p className="text-muted text-xs font-body flex items-center gap-1.5">
+                    <span>📍</span> {spot.adresse}
+                  </p>
+                )}
+                {status && (
+                  <p className="text-xs font-body font-medium" style={{ color: status.open ? '#6fcf8a' : '#888' }}>
+                    {status.label}
+                  </p>
+                )}
+              </div>
+
+              {/* Tags */}
+              {spot.tags && spot.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {spot.tags.map(tag => (
+                    <span key={tag} className="px-2.5 py-1 rounded-full text-[11px] font-body"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: '#888' }}>
+                      {tag}
+                    </span>
+                  ))}
                 </div>
               )}
-              <div className="p-4 flex flex-col gap-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-display font-bold text-base text-text leading-tight">{spot.nom}</p>
-                    <p className="text-muted text-xs font-body mt-0.5">{spot.arrondissement}e arr. · {'€'.repeat(spot.budget)} · {spot.type}</p>
-                  </div>
-                  <button onClick={() => onRemove(spot.id)} className="text-muted text-lg leading-none mt-0.5 shrink-0">♡</button>
-                </div>
-                {spot.vibe && (
-                  <p className="text-[#888] text-xs italic font-body leading-relaxed line-clamp-2">&ldquo;{spot.vibe}&rdquo;</p>
-                )}
-                <a
-                  href={spot.place_id_google
-                    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spot.nom)}&query_place_id=${spot.place_id_google}`
-                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spot.nom + ' Paris')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-2.5 rounded-full text-center text-xs font-display font-semibold mt-1"
-                  style={{ background: 'linear-gradient(135deg,#F195B8,#D4649A)', color: '#0A0A0A' }}
-                >
-                  Y aller →
-                </a>
-              </div>
+
+              {/* CTA */}
+              <a
+                href={mapsUrl(spot)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-4 rounded-full text-center font-display font-semibold text-sm mt-2"
+                style={{ background: 'linear-gradient(135deg,#F195B8,#D4649A)', color: '#0A0A0A' }}
+              >
+                Y aller →
+              </a>
             </div>
-          ))}
-        </div>
+          </div>
+        )}
       </div>
     </>
   )
