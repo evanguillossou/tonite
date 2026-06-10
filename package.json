@@ -17,6 +17,9 @@
     "react-dom": "^18",
     "react-leaflet": "^5.0.0"
   },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "devDependencies": {
     "@types/leaflet": "^1.9.21",
     "@types/node": "^20",
