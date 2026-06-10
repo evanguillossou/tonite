@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Suspense } from 'react'
+import { haversineKm } from '@/lib/geo'
 import type { Spot } from '@/types'
 
 // ── Favoris (localStorage) ────────────────────────────────────
@@ -545,95 +546,151 @@ function SpotCard({ spot, index, onTap, isFav, onFavToggle }: {
   )
 }
 
-// ── Carte intégrée ────────────────────────────────────────
-function MapView({ spots, activeSpotId, onSpotSelect }: { spots: SpotWithDist[]; activeSpotId?: string; onSpotSelect: (spot: SpotWithDist) => void }) {
-  const mapRef = useRef<HTMLDivElement>(null)
-  const mapInstanceRef = useRef<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
-  const markersRef = useRef<any[]>([]) // eslint-disable-line @typescript-eslint/no-explicit-any
-
-  useEffect(() => {
-    if (!mapRef.current || typeof window === 'undefined') return
-
-    const initMap = async () => {
-      const L = await import('leaflet').then(mod => mod.default)
-
-      // Créer la carte si pas existante
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (!mapInstanceRef.current && mapRef.current) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        mapInstanceRef.current = (L as any).map(mapRef.current).setView([48.8566, 2.3522], 13)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (L as any).tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap',
-          maxZoom: 19,
-        }).addTo(mapInstanceRef.current)
-      }
-
-      // Enlever les anciens marqueurs
-      markersRef.current.forEach(marker => marker.remove())
-      markersRef.current = []
-
-      // Ajouter les nouveaux marqueurs
-      const bounds = L.latLngBounds([])
-      spots.forEach((spot) => {
-        if (!spot.coordonnees_lat || !spot.coordonnees_lng) return
-        const isActive = spot.id === activeSpotId
-        const color = isActive ? '#F195B8' : 'rgba(241,149,184,0.5)'
-        const html = `
-          <div style="
-            width: ${isActive ? 32 : 24}px;
-            height: ${isActive ? 32 : 24}px;
-            background: ${color};
-            border: 2px solid white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: white;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            transition: all 200ms ease;
-          ">•</div>
-        `
-        const icon = L.divIcon({ html, className: '', iconSize: [isActive ? 32 : 24, isActive ? 32 : 24] })
-        const marker = L.marker([spot.coordonnees_lat, spot.coordonnees_lng], { icon }).addTo(mapInstanceRef.current)
-        marker.on('click', () => onSpotSelect(spot))
-        markersRef.current.push(marker)
-        bounds.extend([spot.coordonnees_lat, spot.coordonnees_lng])
-      })
-
-      // Centrer sur les points
-      if (bounds.isValid()) {
-        mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] })
-      }
-
-      // Si un spot est sélectionné, centrer dessus
-      if (activeSpotId) {
-        const active = spots.find(s => s.id === activeSpotId)
-        if (active?.coordonnees_lat && active?.coordonnees_lng) {
-          mapInstanceRef.current.setView([active.coordonnees_lat, active.coordonnees_lng], 14)
-        }
-      }
-    }
-
-    initMap()
-  }, [spots, activeSpotId, onSpotSelect])
-
-  return (
-    <div className="w-full h-64 rounded-2xl overflow-hidden mb-6 border" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
-      <div ref={mapRef} className="w-full h-full" style={{ background: '#0e0e0e' }} />
-      <style>{`
-        .leaflet-control-attribution { background: rgba(0,0,0,0.6) !important; color: #888 !important; font-size: 10px !important; }
-        .leaflet-container a { color: #F195B8 !important; }
-      `}</style>
-    </div>
-  )
-}
-
 function ToniteWordmark() {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img src="/logo.png" alt="Tonite" className="h-12 w-auto" />
+  )
+}
+
+// ── Carte proximity ───────────────────────────────────────────
+function NearbyMapModal({ spots, userLat, userLng, onClose }: {
+  spots: SpotWithDist[]
+  userLat: number
+  userLng: number
+  onClose: () => void
+}) {
+  const mapRef = useRef<HTMLDivElement>(null)
+  const mapInstanceRef = useRef<any>(null)
+
+  useEffect(() => {
+    if (!mapRef.current) return
+
+    const initMap = async () => {
+      try {
+        // Dynamic import pour éviter les SSR issues
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const L = (await import('leaflet')).default as any
+
+        // Créer la map
+        const map = L.map(mapRef.current).setView([userLat, userLng], 15)
+        mapInstanceRef.current = map
+
+        // OSM tiles (gratuit, pas d'API key)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors',
+          maxZoom: 19,
+        }).addTo(map)
+
+        // Marker utilisateur
+        L.circleMarker([userLat, userLng], {
+          radius: 8,
+          fillColor: '#F195B8',
+          color: '#F195B8',
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.8,
+        }).addTo(map).bindPopup('<strong>Vous êtes ici</strong>', { closeButton: true })
+
+        // Markers bars
+        spots.forEach(spot => {
+          if (spot.coordonnees_lat && spot.coordonnees_lng) {
+            const distance = spot._distance != null
+              ? spot._distance < 1 ? `${Math.round(spot._distance * 1000)}m` : `${spot._distance.toFixed(1)}km`
+              : null
+
+            const marker = L.marker([spot.coordonnees_lat, spot.coordonnees_lng], {
+              icon: L.divIcon({
+                className: 'leaflet-div-icon',
+                html: `<div style="background: linear-gradient(135deg,#F195B8,#D4649A); color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; box-shadow: 0 2px 8px rgba(241,149,184,0.4); border: 2px solid rgba(255,255,255,0.2);">🍸</div>`,
+                iconSize: [36, 36],
+                iconAnchor: [18, 18],
+                popupAnchor: [0, -18],
+              }),
+            }).addTo(map)
+
+            const popupHtml = `<div style="font-size: 12px; font-family: system-ui; min-width: 140px;"><strong>${spot.nom}</strong><br/><span style="color: #888; font-size: 11px;">${spot.type} · ${spot.arrondissement}e arr.</span>${distance ? `<br/><span style="color: #F195B8; font-weight: 600; font-size: 12px;">${distance}</span>` : ''}</div>`
+            marker.bindPopup(popupHtml, { closeButton: false, maxWidth: 200 })
+          }
+        })
+      } catch (err) {
+        console.error('[Map] Failed to initialize:', err)
+      }
+    }
+
+    initMap()
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove()
+        mapInstanceRef.current = null
+      }
+    }
+  }, [spots, userLat, userLng])
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/70" onClick={onClose} />
+      <div className="fixed inset-0 z-50 flex flex-col max-w-lg mx-auto bg-[#0e0e0e] rounded-t-3xl overflow-hidden"
+        style={{ animation: 'slideUp 280ms cubic-bezier(0.32,0.72,0,1) both', bottom: 0 }}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+          <h2 className="font-display font-bold text-lg text-text">
+            {spots.length} bar{spots.length > 1 ? 's' : ''} à proximité
+          </h2>
+          <button onClick={onClose} className="text-muted hover:text-text transition-colors text-lg font-bold" style={{ lineHeight: 1 }}>
+            ✕
+          </button>
+        </div>
+
+        {/* Map container */}
+        <div className="flex-1 relative" style={{ minHeight: '350px' }}>
+          <div ref={mapRef} className="w-full h-full" style={{ zIndex: 1 }} />
+          {spots.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center bg-[#111] z-10">
+              <p className="text-muted text-sm font-body text-center">Aucun bar à proximité avec localisation.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Info spots list */}
+        {spots.length > 0 && (
+          <div className="px-5 py-3 border-t overflow-y-auto max-h-[150px]" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+            <div className="flex flex-col gap-2">
+              {spots.map(spot => {
+                const distance = spot._distance != null
+                  ? spot._distance < 1 ? `${Math.round(spot._distance * 1000)}m` : `${spot._distance.toFixed(1)}km`
+                  : null
+                return (
+                  <div key={spot.id} className="pb-2 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                    <p className="font-body font-medium text-sm text-text">{spot.nom}</p>
+                    <p className="text-xs text-muted font-body">
+                      {spot.type} · {spot.arrondissement}e arr. {distance && `· ${distance}`}
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <style>{`
+        .leaflet-popup-content-wrapper {
+          background-color: rgba(20, 20, 20, 0.95) !important;
+          border-radius: 8px !important;
+          color: #f5f5f0 !important;
+        }
+        .leaflet-popup-tip {
+          background-color: rgba(20, 20, 20, 0.95) !important;
+        }
+        .leaflet-popup-content {
+          margin: 8px 12px !important;
+          color: #f5f5f0 !important;
+        }
+      `}</style>
+    </>
   )
 }
 
@@ -656,6 +713,8 @@ function ResultsContent() {
   const [activeSpot, setActiveSpot] = useState<SpotWithDist | null>(null)
   const [openNow, setOpenNow]       = useState(false)
   const [showFavs, setShowFavs]     = useState(false)
+  const [withinKm, setWithinKm]     = useState(false)
+  const [spotsNearby, setSpotsNearby] = useState<SpotWithDist[]>([])
   const { favs, toggle, remove, isFav } = useFavorites()
 
   const fetchSpots = useCallback(async (exclude: string[], withOpenNow?: boolean) => {
@@ -705,8 +764,8 @@ function ResultsContent() {
         {!arr && lat && lng && <p className="text-muted text-xs mt-1 font-body">Près de toi</p>}
       </header>
 
-      {/* Toggle ouvert maintenant */}
-      <div className="mb-5 fade-up">
+      {/* Filtres */}
+      <div className="mb-5 fade-up flex flex-col gap-2">
         <button
           onClick={() => {
             const next = !openNow
@@ -728,12 +787,40 @@ function ResultsContent() {
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: openNow ? '#6fcf8a' : '#444', display: 'inline-block', flexShrink: 0 }} />
           Ouvert maintenant
         </button>
-      </div>
 
-      {/* Carte des spots courants */}
-      {!loading && spots.length > 0 && (
-        <MapView spots={spots} activeSpotId={activeSpot?.id} onSpotSelect={(spot) => setActiveSpot(spot)} />
-      )}
+        {lat && lng && (
+          <button
+            onClick={() => {
+              const next = !withinKm
+              setWithinKm(next)
+              if (next) {
+                // Filter current spots to those within 1km
+                const userLat = Number(lat)
+                const userLng = Number(lng)
+                const nearby = spots.filter(s => {
+                  if (!s.coordonnees_lat || !s.coordonnees_lng) return false
+                  const dist = haversineKm(userLat, userLng, s.coordonnees_lat as number, s.coordonnees_lng as number)
+                  return dist <= 1
+                })
+                setSpotsNearby(nearby)
+              }
+            }}
+            className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-body font-medium transition-all"
+            style={withinKm ? {
+              background: 'rgba(241,149,184,0.15)',
+              border: '1px solid #F195B8',
+              color: '#F195B8',
+            } : {
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: '#666',
+            }}
+          >
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: withinKm ? '#F195B8' : '#444', display: 'inline-block', flexShrink: 0 }} />
+            À moins de 1km de moi
+          </button>
+        )}
+      </div>
 
       {/* Skeletons */}
       {loading && (
@@ -824,6 +911,16 @@ function ResultsContent() {
 
       {/* Panneau favoris */}
       {showFavs && <FavsPanel favs={favs} onRemove={remove} onClose={() => setShowFavs(false)} />}
+
+      {/* Carte proximité */}
+      {withinKm && lat && lng && (
+        <NearbyMapModal
+          spots={spotsNearby}
+          userLat={Number(lat)}
+          userLng={Number(lng)}
+          onClose={() => setWithinKm(false)}
+        />
+      )}
     </main>
   )
 }
