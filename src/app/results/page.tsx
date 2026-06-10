@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Suspense } from 'react'
 import type { Spot } from '@/types'
@@ -545,6 +545,91 @@ function SpotCard({ spot, index, onTap, isFav, onFavToggle }: {
   )
 }
 
+// ── Carte intégrée ────────────────────────────────────────
+function MapView({ spots, activeSpotId, onSpotSelect }: { spots: SpotWithDist[]; activeSpotId?: string; onSpotSelect: (spot: SpotWithDist) => void }) {
+  const mapRef = useRef<HTMLDivElement>(null)
+  const mapInstanceRef = useRef<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
+  const markersRef = useRef<any[]>([]) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+  useEffect(() => {
+    if (!mapRef.current || typeof window === 'undefined') return
+
+    const initMap = async () => {
+      const L = await import('leaflet').then(mod => mod.default)
+
+      // Créer la carte si pas existante
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (!mapInstanceRef.current && mapRef.current) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        mapInstanceRef.current = (L as any).map(mapRef.current).setView([48.8566, 2.3522], 13)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (L as any).tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap',
+          maxZoom: 19,
+        }).addTo(mapInstanceRef.current)
+      }
+
+      // Enlever les anciens marqueurs
+      markersRef.current.forEach(marker => marker.remove())
+      markersRef.current = []
+
+      // Ajouter les nouveaux marqueurs
+      const bounds = L.latLngBounds([])
+      spots.forEach((spot) => {
+        if (!spot.coordonnees_lat || !spot.coordonnees_lng) return
+        const isActive = spot.id === activeSpotId
+        const color = isActive ? '#F195B8' : 'rgba(241,149,184,0.5)'
+        const html = `
+          <div style="
+            width: ${isActive ? 32 : 24}px;
+            height: ${isActive ? 32 : 24}px;
+            background: ${color};
+            border: 2px solid white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            transition: all 200ms ease;
+          ">•</div>
+        `
+        const icon = L.divIcon({ html, className: '', iconSize: [isActive ? 32 : 24, isActive ? 32 : 24] })
+        const marker = L.marker([spot.coordonnees_lat, spot.coordonnees_lng], { icon }).addTo(mapInstanceRef.current)
+        marker.on('click', () => onSpotSelect(spot))
+        markersRef.current.push(marker)
+        bounds.extend([spot.coordonnees_lat, spot.coordonnees_lng])
+      })
+
+      // Centrer sur les points
+      if (bounds.isValid()) {
+        mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] })
+      }
+
+      // Si un spot est sélectionné, centrer dessus
+      if (activeSpotId) {
+        const active = spots.find(s => s.id === activeSpotId)
+        if (active?.coordonnees_lat && active?.coordonnees_lng) {
+          mapInstanceRef.current.setView([active.coordonnees_lat, active.coordonnees_lng], 14)
+        }
+      }
+    }
+
+    initMap()
+  }, [spots, activeSpotId, onSpotSelect])
+
+  return (
+    <div className="w-full h-64 rounded-2xl overflow-hidden mb-6 border" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+      <div ref={mapRef} className="w-full h-full" style={{ background: '#0e0e0e' }} />
+      <style>{`
+        .leaflet-control-attribution { background: rgba(0,0,0,0.6) !important; color: #888 !important; font-size: 10px !important; }
+        .leaflet-container a { color: #F195B8 !important; }
+      `}</style>
+    </div>
+  )
+}
+
 function ToniteWordmark() {
   return (
     // eslint-disable-next-line @next/next/no-img-element
@@ -644,6 +729,11 @@ function ResultsContent() {
           Ouvert maintenant
         </button>
       </div>
+
+      {/* Carte des spots courants */}
+      {!loading && spots.length > 0 && (
+        <MapView spots={spots} activeSpotId={activeSpot?.id} onSpotSelect={(spot) => setActiveSpot(spot)} />
+      )}
 
       {/* Skeletons */}
       {loading && (

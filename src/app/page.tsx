@@ -297,11 +297,6 @@ export default function HomePage() {
               Suggérer un lieu
             </a>
           </p>
-          <p className="text-center text-muted text-xs mt-2 font-body">
-            <a href="/map" className="underline underline-offset-2 hover:text-text transition-colors">
-              Voir tous les spots sur la carte
-            </a>
-          </p>
         </div>
 
       </div>
