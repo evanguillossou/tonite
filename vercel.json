@@ -1,5 +1,3 @@
 {
-  "framework": "nextjs",
-  "buildCommand": "next build",
-  "nodeVersion": "18.x"
+  "framework": "nextjs"
 }
