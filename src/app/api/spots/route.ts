@@ -5,7 +5,7 @@ import { haversineKm, arrondissementsByDistance, ARR_CENTERS } from '@/lib/geo'
 export const dynamic = 'force-dynamic'
 
 // Types qui correspondent vraiment à des bars/clubs nightlife
-const BAR_TYPES = ['bar', 'club', 'cave à cocktails', 'bar à vin', 'bar à bière', 'rooftop']
+const BAR_TYPES = ['bar', 'club', 'bar à cocktails', 'bar à vin', 'bar à bière', 'rooftop']
 
 // Vérifie si un spot est ouvert maintenant (même logique que côté client)
 type Period = { open: { day: number; time: string }; close?: { day: number; time: string } }
