@@ -130,6 +130,8 @@ export default function SpotsPage() {
     const cleanPhotos = (editing.photos || [editing.photo_url || '']).map(p => p?.trim()).filter(Boolean) as string[]
     await supabase.from('spots').update({
       nom: editing.nom,
+      adresse: editing.adresse,
+      arrondissement: editing.arrondissement,
       type: editing.type,
       vibe: editing.vibe,
       budget: editing.budget,
@@ -266,6 +268,26 @@ export default function SpotsPage() {
                 onChange={(e) => setEditing({ ...editing, nom: e.target.value })}
                 className="input-style"
               />
+            </Field>
+
+            <Field label="Adresse">
+              <input
+                value={editing.adresse || ''}
+                onChange={(e) => setEditing({ ...editing, adresse: e.target.value })}
+                className="input-style"
+              />
+            </Field>
+
+            <Field label="Arrondissement">
+              <select
+                value={editing.arrondissement}
+                onChange={(e) => setEditing({ ...editing, arrondissement: Number(e.target.value) })}
+                className="input-style"
+              >
+                {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={n}>{n}e</option>
+                ))}
+              </select>
             </Field>
 
             <Field label="Type">
