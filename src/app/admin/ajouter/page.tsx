@@ -328,13 +328,12 @@ export default function AjouterPage() {
             </div>
 
             {/* Horaires */}
-            {!form.horaires && (
+            {form.horaires == null ? (
               <div>
                 <label className="text-[#6b6b6b] text-xs mb-2 block">Horaires</label>
                 <HorairesEditor value={jours} onChange={setJours} />
               </div>
-            )}
-            {form.horaires && (
+            ) : (
               <div className="bg-[#0f1f0f] border border-green-900 rounded-xl p-3">
                 <p className="text-green-400 text-xs">✓ Horaires importés depuis Google ({(form.horaires as unknown[]).length} périodes)</p>
               </div>
