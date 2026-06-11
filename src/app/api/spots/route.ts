@@ -4,8 +4,13 @@ import { haversineKm, arrondissementsByDistance, ARR_CENTERS } from '@/lib/geo'
 
 export const dynamic = 'force-dynamic'
 
-// Types qui correspondent vraiment à des bars/clubs nightlife
-const BAR_TYPES = ['bar', 'club', 'bar à cocktails', 'bar à vin', 'bar à bière', 'rooftop']
+// Types par catégorie
+const TYPES_BY_CATEGORIE: Record<string, string[]> = {
+  bar:      ['bar', 'bar à cocktails', 'bar à vin', 'bar à bière', 'rooftop'],
+  clubbing: ['club'],
+  terrasse: ['terrasse'],
+  bouffe:   ['bistrot', 'restaurant', 'grec', 'asiatique', 'italien', 'tapas', 'bonne bouffe'],
+}
 
 // Vérifie si un spot est ouvert maintenant (même logique que côté client)
 type Period = { open: { day: number; time: string }; close?: { day: number; time: string } }
@@ -34,10 +39,7 @@ async function fetchFromArr(
   supabase: ReturnType<typeof createAdminClient>,
   arrList: number[],
   filters: {
-    energie?: number
-    budget?: number
-    excludeClubs?: boolean
-    preferClubs?: boolean
+    types?: string[]
     requirePhoto?: boolean
   },
   seenIds: Set<string>,
@@ -47,12 +49,7 @@ async function fetchFromArr(
   for (const a of arrList) {
     if (collected.length >= limit) break
     let q = supabase.from('spots').select('*').eq('actif', true).eq('arrondissement', a)
-    // Whitelist — exclut restaurants et autres types non-nightlife
-    q = q.in('type', BAR_TYPES)
-    if (filters.energie) q = q.eq('energie', filters.energie)
-    if (filters.budget)  q = q.eq('budget', filters.budget)
-    if (filters.excludeClubs) q = q.neq('type', 'club')
-    if (filters.preferClubs)  q = q.in('type', ['club', 'bar'])
+    if (filters.types && filters.types.length > 0) q = q.in('type', filters.types)
     if (filters.requirePhoto) q = q.not('photo_url', 'is', null)
     q = q.limit(30)
     const { data } = await q
@@ -98,33 +95,26 @@ export async function GET(req: NextRequest) {
   const seenIds = new Set(excludeIds)
   const collected: Record<string, unknown>[] = []
 
-  // Filtres selon catégorie
-  const excludeClubs = categorie !== 'clubbing'
-  const preferClubs  = categorie === 'clubbing'
+  const types = TYPES_BY_CATEGORIE[categorie] || TYPES_BY_CATEGORIE['bar']
 
   // ── Passes avec photo obligatoire ──
-  // Passe 1 — photo + proches
-  collected.push(...await fetchFromArr(supabase, nearbyArrs, { excludeClubs, preferClubs, requirePhoto: true }, seenIds, 9))
+  collected.push(...await fetchFromArr(supabase, nearbyArrs, { types, requirePhoto: true }, seenIds, 9))
 
-  // Passe 2 — photo + étendus
   if (collected.length < 3) {
-    collected.push(...await fetchFromArr(supabase, extendedArrs, { excludeClubs, preferClubs, requirePhoto: true }, seenIds, 9))
+    collected.push(...await fetchFromArr(supabase, extendedArrs, { types, requirePhoto: true }, seenIds, 9))
   }
 
-  // Passe 3 — photo + tous arrondissements
   if (collected.length < 3) {
-    collected.push(...await fetchFromArr(supabase, arrByProximity, { requirePhoto: true }, seenIds, 9))
+    collected.push(...await fetchFromArr(supabase, arrByProximity, { types, requirePhoto: true }, seenIds, 9))
   }
 
   // ── Passes sans contrainte photo (fallback) ──
-  // Passe 4 — sans photo + proches
   if (collected.length < 3) {
-    collected.push(...await fetchFromArr(supabase, nearbyArrs, { excludeClubs, preferClubs }, seenIds, 9))
+    collected.push(...await fetchFromArr(supabase, nearbyArrs, { types }, seenIds, 9))
   }
 
-  // Passe 5 — sans contrainte (dernier recours)
   if (collected.length < 3) {
-    collected.push(...await fetchFromArr(supabase, arrByProximity, {}, seenIds, 9))
+    collected.push(...await fetchFromArr(supabase, arrByProximity, { types }, seenIds, 9))
   }
 
   // Trier : spots avec photo en premier, puis par distance si géoloc dispo

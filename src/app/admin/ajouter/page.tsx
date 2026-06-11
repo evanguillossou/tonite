@@ -6,7 +6,18 @@ import { supabase } from '@/lib/supabase'
 import AdminGuard from '@/components/AdminGuard'
 import AdminNav from '@/components/AdminNav'
 
-const TYPES = ['bar', 'club', 'rooftop', 'bar à cocktails', 'bar à vin', 'bar à bière', 'autre']
+const TYPES = [
+  // Bar d'ambiance
+  'bar', 'bar à cocktails', 'bar à vin', 'bar à bière', 'rooftop',
+  // Clubbing
+  'club',
+  // Terrasse
+  'terrasse',
+  // Bonne bouffe
+  'bistrot', 'restaurant', 'grec', 'asiatique', 'italien', 'tapas', 'bonne bouffe',
+  // Autre
+  'autre',
+]
 
 type FormData = {
   nom: string
