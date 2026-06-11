@@ -68,9 +68,7 @@ async function fetchFromArr(
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
-  const energie     = Number(searchParams.get('energie')) || 2
-  const budget      = Number(searchParams.get('budget'))  || 2
-  const compagnie   = searchParams.get('compagnie') || 'duo'
+  const categorie   = searchParams.get('categorie') || 'bar'
   const openNow     = searchParams.get('openNow') === 'true'
   const excludeRaw  = searchParams.get('exclude') || ''
   const excludeIds  = excludeRaw.split(',').filter(Boolean)
@@ -100,41 +98,31 @@ export async function GET(req: NextRequest) {
   const seenIds = new Set(excludeIds)
   const collected: Record<string, unknown>[] = []
 
-  // Contraintes compagnie
-  const excludeClubs = compagnie === 'solo'
-  const preferClubs  = compagnie === 'groupe' && energie >= 2
+  // Filtres selon catégorie
+  const excludeClubs = categorie !== 'clubbing'
+  const preferClubs  = categorie === 'clubbing'
 
   // ── Passes avec photo obligatoire ──
-  // Passe 1 — tous filtres + photo + proches
-  collected.push(...await fetchFromArr(supabase, nearbyArrs, { energie, budget, excludeClubs, preferClubs, requirePhoto: true }, seenIds, 9))
+  // Passe 1 — photo + proches
+  collected.push(...await fetchFromArr(supabase, nearbyArrs, { excludeClubs, preferClubs, requirePhoto: true }, seenIds, 9))
 
-  // Passe 2 — budget + compagnie + photo + proches
+  // Passe 2 — photo + étendus
   if (collected.length < 3) {
-    collected.push(...await fetchFromArr(supabase, nearbyArrs, { budget, excludeClubs, preferClubs, requirePhoto: true }, seenIds, 9))
+    collected.push(...await fetchFromArr(supabase, extendedArrs, { excludeClubs, preferClubs, requirePhoto: true }, seenIds, 9))
   }
 
-  // Passe 3 — tous filtres + photo + étendus
+  // Passe 3 — photo + tous arrondissements
   if (collected.length < 3) {
-    collected.push(...await fetchFromArr(supabase, extendedArrs, { energie, budget, excludeClubs, preferClubs, requirePhoto: true }, seenIds, 9))
-  }
-
-  // Passe 4 — budget + photo + tous arrondissements
-  if (collected.length < 3) {
-    collected.push(...await fetchFromArr(supabase, arrByProximity, { budget, requirePhoto: true }, seenIds, 9))
+    collected.push(...await fetchFromArr(supabase, arrByProximity, { requirePhoto: true }, seenIds, 9))
   }
 
   // ── Passes sans contrainte photo (fallback) ──
-  // Passe 5 — tous filtres + sans photo + proches
+  // Passe 4 — sans photo + proches
   if (collected.length < 3) {
-    collected.push(...await fetchFromArr(supabase, nearbyArrs, { energie, budget, excludeClubs, preferClubs }, seenIds, 9))
+    collected.push(...await fetchFromArr(supabase, nearbyArrs, { excludeClubs, preferClubs }, seenIds, 9))
   }
 
-  // Passe 6 — budget seul + tous arrondissements
-  if (collected.length < 3) {
-    collected.push(...await fetchFromArr(supabase, arrByProximity, { budget }, seenIds, 9))
-  }
-
-  // Passe 7 — sans contrainte (dernier recours)
+  // Passe 5 — sans contrainte (dernier recours)
   if (collected.length < 3) {
     collected.push(...await fetchFromArr(supabase, arrByProximity, {}, seenIds, 9))
   }

@@ -558,9 +558,7 @@ function ResultsContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
-  const energie   = Number(searchParams.get('energie')) as 1 | 2 | 3
-  const budget    = Number(searchParams.get('budget'))  as 1 | 2 | 3
-  const compagnie = searchParams.get('compagnie') || 'solo'
+  const categorie = searchParams.get('categorie') || 'bar'
   const lat = searchParams.get('lat')
   const lng = searchParams.get('lng')
   const arr = searchParams.get('arr')
@@ -578,7 +576,7 @@ const { favs, toggle, remove, isFav } = useFavorites()
     setLoading(true)
     setError(null)
     try {
-      const params = new URLSearchParams({ energie: String(energie), budget: String(budget), exclude: exclude.join(',') })
+      const params = new URLSearchParams({ categorie, exclude: exclude.join(',') })
       if (lat && lng) { params.set('lat', lat); params.set('lng', lng) }
       if (arr) params.set('arr', arr)
       if (withOpenNow) params.set('openNow', 'true')
@@ -592,11 +590,16 @@ const { favs, toggle, remove, isFav } = useFavorites()
     } finally {
       setLoading(false)
     }
-  }, [energie, budget, lat, lng, arr])
+  }, [categorie, lat, lng, arr])
 
   useEffect(() => { fetchSpots([]) }, [fetchSpots])
 
-  const energieLabel = ['', 'Calme', 'Animé', 'Festif'][energie]
+  const categorieLabel: Record<string, string> = {
+    bar: 'Bar d\'ambiance',
+    terrasse: 'En terrasse',
+    bouffe: 'Bonne bouffe',
+    clubbing: 'Clubbing',
+  }
 
   return (
     <main className="min-h-screen bg-bg flex flex-col px-5 pt-8 pb-safe max-w-lg mx-auto">
@@ -615,7 +618,7 @@ const { favs, toggle, remove, isFav } = useFavorites()
       <header className="mb-5 fade-up">
         <p className="text-[11px] tracking-[0.2em] text-muted uppercase mb-2 font-body">Ce soir pour toi</p>
         <h1 className="font-display font-bold text-2xl text-text">
-          {energieLabel} · {budgetLabel(budget)} · {compagnie}
+          {categorieLabel[categorie] || categorie}
         </h1>
         {arr  && <p className="text-muted text-xs mt-1 font-body">{arr}e arrondissement</p>}
         {!arr && lat && lng && <p className="text-muted text-xs mt-1 font-body">Près de toi</p>}

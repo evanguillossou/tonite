@@ -4,33 +4,42 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { arrondissementsByDistance } from '@/lib/geo'
 
-type Energie = 1 | 2 | 3
-type Budget = 1 | 2 | 3
-type Compagnie = 'solo' | 'duo' | 'groupe'
+type Categorie = 'bar' | 'terrasse' | 'bouffe' | 'clubbing'
 
-const energieOptions = [
-  { value: 1, label: 'Calme',  desc: 'Bonne conv.' },
-  { value: 2, label: 'Animé',  desc: 'Musique, monde' },
-  { value: 3, label: 'Festif', desc: 'Dancefloor' },
-]
-
-const budgetOptions = [
-  { value: 1, label: '€',   desc: '–15€' },
-  { value: 2, label: '€€',  desc: '15–30€' },
-  { value: 3, label: '€€€', desc: '30€+' },
-]
-
-const compagnieOptions = [
-  { value: 'solo',   label: 'Solo' },
-  { value: 'duo',    label: 'Duo' },
-  { value: 'groupe', label: 'Groupe' },
+const categories = [
+  {
+    value: 'bar' as Categorie,
+    label: 'Bar d\'ambiance',
+    desc: 'Comptoir, bières, cocktails',
+    emoji: '🍸',
+    active: true,
+  },
+  {
+    value: 'terrasse' as Categorie,
+    label: 'En terrasse',
+    desc: 'Soleil & plein air',
+    emoji: '☀️',
+    active: false,
+  },
+  {
+    value: 'bouffe' as Categorie,
+    label: 'Bonne bouffe',
+    desc: 'Bistrots, restos, planches',
+    emoji: '🍽️',
+    active: false,
+  },
+  {
+    value: 'clubbing' as Categorie,
+    label: 'Clubbing',
+    desc: 'Dancefloor & DJ sets',
+    emoji: '🎧',
+    active: false,
+  },
 ]
 
 export default function HomePage() {
   const router = useRouter()
-  const [energie, setEnergie] = useState<Energie | null>(null)
-  const [budget, setBudget] = useState<Budget | null>(null)
-  const [compagnie, setCompagnie] = useState<Compagnie | null>(null)
+  const [categorie, setCategorie] = useState<Categorie | null>(null)
 
   const [geoStatus, setGeoStatus] = useState<'idle' | 'loading' | 'ok' | 'denied' | 'unavailable' | 'https_required'>('idle')
   const [geoError, setGeoError] = useState<string | null>(null)
@@ -39,7 +48,7 @@ export default function HomePage() {
   const [arrondissement, setArrondissement] = useState<string>('')
   const [loading, setLoading] = useState(false)
 
-  const ready = energie && budget && compagnie && arrondissement
+  const ready = categorie && arrondissement
 
   function requestGeo() {
     if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
@@ -87,11 +96,7 @@ export default function HomePage() {
   function handleSubmit() {
     if (!ready) return
     setLoading(true)
-    const params = new URLSearchParams({
-      energie: String(energie),
-      budget: String(budget),
-      compagnie: compagnie!,
-    })
+    const params = new URLSearchParams({ categorie: categorie! })
     if (geoStatus === 'ok' && userLat && userLng) {
       params.set('lat', String(userLat))
       params.set('lng', String(userLng))
@@ -191,80 +196,31 @@ export default function HomePage() {
             </div>
           </section>
 
-          {/* Énergie */}
+          {/* Catégories */}
           <section className="fade-up delay-2">
-            <Label>Énergie</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {energieOptions.map((opt) => {
-                const sel = energie === opt.value
+            <Label>Ce soir je veux</Label>
+            <div className="grid grid-cols-2 gap-3">
+              {categories.map((cat) => {
+                const sel = categorie === cat.value
                 return (
                   <button
-                    key={opt.value}
-                    onClick={() => setEnergie(opt.value as Energie)}
-                    className="flex flex-col items-center py-4 rounded-xl transition-all"
+                    key={cat.value}
+                    onClick={() => cat.active && setCategorie(cat.value)}
+                    disabled={!cat.active}
+                    className="flex flex-col items-start p-4 rounded-2xl transition-all text-left relative overflow-hidden"
                     style={{
                       border: sel ? '1px solid #F195B8' : '1px solid #2A2A2A',
-                      background: 'transparent',
+                      background: sel ? 'rgba(241,149,184,0.08)' : 'transparent',
+                      opacity: cat.active ? 1 : 0.4,
+                      cursor: cat.active ? 'pointer' : 'not-allowed',
                     }}
                   >
-                    <span className="text-sm font-display font-semibold" style={{ color: sel ? '#F195B8' : '#555' }}>
-                      {opt.label}
+                    <span className="text-2xl mb-2">{cat.emoji}</span>
+                    <span className="text-sm font-display font-semibold" style={{ color: sel ? '#F195B8' : '#ccc' }}>
+                      {cat.label}
                     </span>
-                    <span className="text-[11px] mt-1 font-body" style={{ color: sel ? '#999' : '#3a3a3a' }}>
-                      {opt.desc}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </section>
-
-          {/* Budget */}
-          <section className="fade-up delay-3">
-            <Label>Budget</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {budgetOptions.map((opt) => {
-                const sel = budget === opt.value
-                return (
-                  <button
-                    key={opt.value}
-                    onClick={() => setBudget(opt.value as Budget)}
-                    className="flex flex-col items-center py-4 rounded-xl transition-all"
-                    style={{
-                      border: sel ? '1px solid #F195B8' : '1px solid #2A2A2A',
-                      background: 'transparent',
-                    }}
-                  >
-                    <span className="font-display font-bold text-lg" style={{ color: sel ? '#F195B8' : '#555' }}>
-                      {opt.label}
-                    </span>
-                    <span className="text-[11px] mt-1 font-body" style={{ color: sel ? '#999' : '#3a3a3a' }}>
-                      {opt.desc}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </section>
-
-          {/* Compagnie */}
-          <section className="fade-up delay-4">
-            <Label>Tu sors</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {compagnieOptions.map((opt) => {
-                const sel = compagnie === opt.value
-                return (
-                  <button
-                    key={opt.value}
-                    onClick={() => setCompagnie(opt.value as Compagnie)}
-                    className="flex flex-col items-center py-4 rounded-xl transition-all"
-                    style={{
-                      border: sel ? '1px solid #F195B8' : '1px solid #2A2A2A',
-                      background: 'transparent',
-                    }}
-                  >
-                    <span className="text-sm font-display font-semibold" style={{ color: sel ? '#F195B8' : '#555' }}>
-                      {opt.label}
+                    <span className="text-[11px] mt-0.5 font-body" style={{ color: sel ? '#999' : '#444' }}>
+                      {cat.active ? cat.desc : 'Bientôt'}
                     </span>
                   </button>
                 )
