@@ -6,6 +6,73 @@ import AdminGuard from '@/components/AdminGuard'
 import AdminNav from '@/components/AdminNav'
 import type { Spot } from '@/types'
 
+const JOURS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
+
+type JourHoraire = { ouvert: boolean; ouverture: string; fermeture: string }
+type Period = { open: { day: number; time: string }; close?: { day: number; time: string } }
+
+function defaultJours(): JourHoraire[] {
+  return JOURS.map(() => ({ ouvert: false, ouverture: '18:00', fermeture: '02:00' }))
+}
+
+function jsonToJours(horaires: unknown): JourHoraire[] {
+  const jours = defaultJours()
+  const periods = horaires as Period[] | null
+  if (!periods) return jours
+  for (const p of periods) {
+    const day = p.open.day
+    if (day < 0 || day > 6) continue
+    const openTime = p.open.time.padStart(4, '0')
+    const closeTime = p.close?.time?.padStart(4, '0') || '0200'
+    jours[day] = {
+      ouvert: true,
+      ouverture: `${openTime.slice(0, 2)}:${openTime.slice(2)}`,
+      fermeture: `${closeTime.slice(0, 2)}:${closeTime.slice(2)}`,
+    }
+  }
+  return jours
+}
+
+function horaireToJson(jours: JourHoraire[]) {
+  const periods: { open: { day: number; time: string }; close: { day: number; time: string } }[] = []
+  jours.forEach((j, day) => {
+    if (!j.ouvert) return
+    const openTime = j.ouverture.replace(':', '')
+    const closeTime = j.fermeture.replace(':', '')
+    const closeDay = parseInt(closeTime) < parseInt(openTime) ? (day + 1) % 7 : day
+    periods.push({ open: { day, time: openTime }, close: { day: closeDay, time: closeTime } })
+  })
+  return periods.length > 0 ? periods : null
+}
+
+function HorairesEditor({ value, onChange }: { value: JourHoraire[], onChange: (v: JourHoraire[]) => void }) {
+  function update(i: number, patch: Partial<JourHoraire>) {
+    const next = value.map((j, idx) => idx === i ? { ...j, ...patch } : j)
+    onChange(next)
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      {JOURS.map((jour, i) => (
+        <div key={jour} className="flex items-center gap-3">
+          <label className="flex items-center gap-2 w-28 cursor-pointer">
+            <input type="checkbox" checked={value[i].ouvert} onChange={e => update(i, { ouvert: e.target.checked })} className="accent-[#8B5CF6]" />
+            <span className={`text-xs ${value[i].ouvert ? 'text-[#f5f5f0]' : 'text-[#444]'}`}>{jour}</span>
+          </label>
+          {value[i].ouvert ? (
+            <>
+              <input type="time" value={value[i].ouverture} onChange={e => update(i, { ouverture: e.target.value })} className="input-style text-xs w-24 py-1.5" />
+              <span className="text-[#444] text-xs">→</span>
+              <input type="time" value={value[i].fermeture} onChange={e => update(i, { fermeture: e.target.value })} className="input-style text-xs w-24 py-1.5" />
+            </>
+          ) : (
+            <span className="text-[#333] text-xs">Fermé</span>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 const TYPES = [
   // Bar d'ambiance
   'bar', 'bar à cocktails', 'bar à vin', 'bar à bière', 'rooftop',
@@ -25,6 +92,7 @@ export default function SpotsPage() {
   const [filters, setFilters] = useState({ vibe: '', actif: '', arr: '' })
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState<Spot | null>(null)
+  const [editingJours, setEditingJours] = useState<JourHoraire[]>(defaultJours())
   const [saving, setSaving] = useState(false)
 
   async function loadSpots() {
@@ -71,6 +139,7 @@ export default function SpotsPage() {
       photos: cleanPhotos.length > 0 ? cleanPhotos : null,
       actif: editing.actif,
       vibe_enrichie: editing.vibe_enrichie,
+      horaires: horaireToJson(editingJours),
     }).eq('id', editing.id)
     setSaving(false)
     setEditing(null)
@@ -166,7 +235,7 @@ export default function SpotsPage() {
                       </td>
                       <td className="py-3">
                         <button
-                          onClick={() => setEditing(spot)}
+                          onClick={() => { setEditing(spot); setEditingJours(jsonToJours(spot.horaires)) }}
                           className="text-[#8B5CF6] hover:text-[#a78bfa] text-xs"
                         >
                           Éditer
@@ -293,6 +362,11 @@ export default function SpotsPage() {
                   >+ Ajouter une photo</button>
                 )}
               </div>
+            </div>
+
+            <div>
+              <label className="text-[#6b6b6b] text-xs mb-2 block">Horaires</label>
+              <HorairesEditor value={editingJours} onChange={setEditingJours} />
             </div>
 
             <div className="flex gap-6">

@@ -6,6 +6,72 @@ import { supabase } from '@/lib/supabase'
 import AdminGuard from '@/components/AdminGuard'
 import AdminNav from '@/components/AdminNav'
 
+const JOURS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
+
+type JourHoraire = {
+  ouvert: boolean
+  ouverture: string
+  fermeture: string
+}
+
+const defaultJours = (): JourHoraire[] =>
+  JOURS.map(() => ({ ouvert: false, ouverture: '18:00', fermeture: '02:00' }))
+
+function horaireToJson(jours: JourHoraire[]) {
+  const periods: { open: { day: number; time: string }; close: { day: number; time: string } }[] = []
+  jours.forEach((j, day) => {
+    if (!j.ouvert) return
+    const openTime = j.ouverture.replace(':', '')
+    const closeTime = j.fermeture.replace(':', '')
+    const closeDay = parseInt(closeTime) < parseInt(openTime) ? (day + 1) % 7 : day
+    periods.push({ open: { day, time: openTime }, close: { day: closeDay, time: closeTime } })
+  })
+  return periods.length > 0 ? periods : null
+}
+
+function HorairesEditor({ value, onChange }: { value: JourHoraire[], onChange: (v: JourHoraire[]) => void }) {
+  function update(i: number, patch: Partial<JourHoraire>) {
+    const next = value.map((j, idx) => idx === i ? { ...j, ...patch } : j)
+    onChange(next)
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      {JOURS.map((jour, i) => (
+        <div key={jour} className="flex items-center gap-3">
+          <label className="flex items-center gap-2 w-28 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={value[i].ouvert}
+              onChange={e => update(i, { ouvert: e.target.checked })}
+              className="accent-[#FF6B35]"
+            />
+            <span className={`text-xs ${value[i].ouvert ? 'text-[#f5f5f0]' : 'text-[#444]'}`}>{jour}</span>
+          </label>
+          {value[i].ouvert ? (
+            <>
+              <input
+                type="time"
+                value={value[i].ouverture}
+                onChange={e => update(i, { ouverture: e.target.value })}
+                className="input-style text-xs w-24 py-1.5"
+              />
+              <span className="text-[#444] text-xs">→</span>
+              <input
+                type="time"
+                value={value[i].fermeture}
+                onChange={e => update(i, { fermeture: e.target.value })}
+                className="input-style text-xs w-24 py-1.5"
+              />
+            </>
+          ) : (
+            <span className="text-[#333] text-xs">Fermé</span>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 const TYPES = [
   // Bar d'ambiance
   'bar', 'bar à cocktails', 'bar à vin', 'bar à bière', 'rooftop',
@@ -53,6 +119,7 @@ export default function AjouterPage() {
   const [mapsUrl, setMapsUrl] = useState('')
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
+  const [jours, setJours] = useState<JourHoraire[]>(defaultJours())
 
   function updatePhoto(index: number, value: string) {
     const next = [...form.photos]
@@ -127,7 +194,7 @@ export default function AjouterPage() {
       note_google:     form.note_google ? Number(form.note_google) : null,
       coordonnees_lat: form.coordonnees_lat ? Number(form.coordonnees_lat) : null,
       coordonnees_lng: form.coordonnees_lng ? Number(form.coordonnees_lng) : null,
-      horaires:        form.horaires || null,
+      horaires:        form.horaires || horaireToJson(jours),
       actif:           form.actif,
       vibe_enrichie:   form.vibe_enrichie,
       suggestions_count: 0,
@@ -259,6 +326,19 @@ export default function AjouterPage() {
                 )}
               </div>
             </div>
+
+            {/* Horaires */}
+            {!form.horaires && (
+              <div>
+                <label className="text-[#6b6b6b] text-xs mb-2 block">Horaires</label>
+                <HorairesEditor value={jours} onChange={setJours} />
+              </div>
+            )}
+            {form.horaires && (
+              <div className="bg-[#0f1f0f] border border-green-900 rounded-xl p-3">
+                <p className="text-green-400 text-xs">✓ Horaires importés depuis Google ({(form.horaires as unknown[]).length} périodes)</p>
+              </div>
+            )}
 
             {/* Champs techniques */}
             {form.place_id_google && (
