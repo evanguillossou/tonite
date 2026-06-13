@@ -107,14 +107,23 @@ export default function MapView({
           const lat = Number(spot.coordonnees_lat)
           if (!lat || !lng) continue
 
+          // Conteneur positionné par Mapbox (taille fixe = ancrage stable).
+          // On ne touche JAMAIS son transform → plus de saut en haut à gauche.
+          const wrapper = document.createElement('div')
+          wrapper.style.cssText = 'width:24px;height:24px;display:flex;align-items:center;justify-content:center'
+
+          // Pin visible : c'est lui qu'on anime/agrandit (jamais le wrapper).
           const el = document.createElement('div')
           el.className = 'tonite-pin'
           el.style.cssText = [
             'width:16px', 'height:16px', 'border-radius:50%',
             'background:#F195B8', 'border:2px solid #0A0A0A',
             'box-shadow:0 0 0 1px rgba(241,149,184,0.5), 0 2px 6px rgba(0,0,0,0.5)',
-            'cursor:pointer', 'transition:transform 150ms ease',
+            'cursor:pointer',
+            'transition:transform 150ms ease, width 150ms ease, height 150ms ease',
           ].join(';')
+          wrapper.appendChild(el)
+
           el.addEventListener('click', (e) => {
             e.stopPropagation()
             onSelectRef.current(spot)
@@ -123,7 +132,7 @@ export default function MapView({
           el.addEventListener('mouseleave', () => { el.style.transform = '' })
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const marker = new (mapboxgl as any).Marker({ element: el })
+          const marker = new (mapboxgl as any).Marker({ element: wrapper })
             .setLngLat([lng, lat])
             .addTo(map)
           markersRef.current.push({ id: spot.id, el, marker })
