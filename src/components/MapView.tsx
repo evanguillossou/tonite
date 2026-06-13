@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Spot } from '@/types'
 
 const MAPBOX_VERSION = 'v3.7.0'
@@ -58,7 +58,18 @@ export default function MapView({
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapboxMap | null>(null)
   const markersRef = useRef<{ id: string; el: HTMLElement; marker: { remove: () => void } }[]>([])
-  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+
+  // Clé Mapbox récupérée au runtime (et non au build) pour éviter le cache de build Vercel.
+  // undefined = en cours de chargement ; null = absente ; string = OK
+  const [token, setToken] = useState<string | null | undefined>(undefined)
+  useEffect(() => {
+    let alive = true
+    fetch('/api/mapbox-token')
+      .then(r => r.json())
+      .then((d: { token?: string }) => { if (alive) setToken(d.token || null) })
+      .catch(() => { if (alive) setToken(null) })
+    return () => { alive = false }
+  }, [])
 
   // onSelect peut changer à chaque render du parent : on le garde dans une ref
   // pour ne PAS ré-initialiser la carte à chaque fois.
@@ -153,6 +164,14 @@ export default function MapView({
       }
     })
   }, [selectedId])
+
+  if (token === undefined) {
+    return (
+      <div className="flex items-center justify-center h-full text-center px-8">
+        <p className="text-muted text-sm font-body">Chargement de la carte…</p>
+      </div>
+    )
+  }
 
   if (!token) {
     return (
