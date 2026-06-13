@@ -97,6 +97,21 @@ export async function GET(req: NextRequest) {
 
   const types = TYPES_BY_CATEGORIE[categorie] || TYPES_BY_CATEGORIE['bar']
 
+  // ── Mode carte : tous les spots de la catégorie avec coordonnées GPS ──
+  if (searchParams.get('all') === 'true') {
+    const { data } = await supabase
+      .from('spots')
+      .select('*')
+      .eq('actif', true)
+      .in('type', types)
+      .not('coordonnees_lat', 'is', null)
+      .not('coordonnees_lng', 'is', null)
+      .limit(500)
+    let list = (data || []) as Record<string, unknown>[]
+    if (openNow) list = list.filter(s => isOpenNow(s.horaires))
+    return NextResponse.json(list)
+  }
+
   // ── Passes avec photo obligatoire ──
   collected.push(...await fetchFromArr(supabase, nearbyArrs, { types, requirePhoto: true }, seenIds, 9))
 

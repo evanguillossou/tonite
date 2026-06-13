@@ -3,7 +3,17 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Suspense } from 'react'
+import dynamic from 'next/dynamic'
 import type { Spot } from '@/types'
+
+const MapView = dynamic(() => import('@/components/MapView'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-full">
+      <p className="text-muted text-sm font-body">Chargement de la carte…</p>
+    </div>
+  ),
+})
 
 // ── Favoris (localStorage) ────────────────────────────────────
 const FAV_KEY = 'tonite_favs'
@@ -570,7 +580,32 @@ function ResultsContent() {
   const [activeSpot, setActiveSpot] = useState<SpotWithDist | null>(null)
   const [openNow, setOpenNow]       = useState(false)
   const [showFavs, setShowFavs]     = useState(false)
+  const [view, setView]             = useState<'list' | 'map'>('list')
+  const [mapSpots, setMapSpots]     = useState<SpotWithDist[] | null>(null)
+  const [mapLoading, setMapLoading] = useState(false)
 const { favs, toggle, remove, isFav } = useFavorites()
+
+  const fetchMapSpots = useCallback(async (withOpenNow?: boolean) => {
+    setMapLoading(true)
+    try {
+      const params = new URLSearchParams({ categorie, all: 'true' })
+      if (lat && lng) { params.set('lat', lat); params.set('lng', lng) }
+      if (arr) params.set('arr', arr)
+      if (withOpenNow) params.set('openNow', 'true')
+      const res = await fetch(`/api/spots?${params}`)
+      if (!res.ok) throw new Error()
+      setMapSpots(await res.json())
+    } catch {
+      setMapSpots([])
+    } finally {
+      setMapLoading(false)
+    }
+  }, [categorie, lat, lng, arr])
+
+  function switchView(v: 'list' | 'map') {
+    setView(v)
+    if (v === 'map' && mapSpots === null) fetchMapSpots(openNow)
+  }
 
   const fetchSpots = useCallback(async (exclude: string[], withOpenNow?: boolean) => {
     setLoading(true)
@@ -624,14 +659,16 @@ const { favs, toggle, remove, isFav } = useFavorites()
         {!arr && lat && lng && <p className="text-muted text-xs mt-1 font-body">Près de toi</p>}
       </header>
 
-      {/* Toggle ouvert maintenant */}
-      <div className="mb-5 fade-up">
+      {/* Toggles : ouvert maintenant + Liste/Carte */}
+      <div className="mb-5 fade-up flex items-center justify-between gap-3">
         <button
           onClick={() => {
             const next = !openNow
             setOpenNow(next)
             setExcludeIds([])
             fetchSpots([], next)
+            setMapSpots(null)
+            if (view === 'map') fetchMapSpots(next)
           }}
           className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-body font-medium transition-all"
           style={openNow ? {
@@ -647,8 +684,31 @@ const { favs, toggle, remove, isFav } = useFavorites()
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: openNow ? '#6fcf8a' : '#444', display: 'inline-block', flexShrink: 0 }} />
           Ouvert maintenant
         </button>
+
+        {/* Segmented control Liste / Carte */}
+        <div className="flex rounded-full p-0.5 shrink-0" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+          {(['list', 'map'] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => switchView(v)}
+              className="px-3.5 py-1.5 rounded-full text-xs font-body font-medium transition-all"
+              style={view === v ? {
+                background: 'linear-gradient(135deg,#F195B8,#D4649A)',
+                color: '#0A0A0A',
+              } : {
+                background: 'transparent',
+                color: '#888',
+              }}
+            >
+              {v === 'list' ? '☰ Liste' : '◍ Carte'}
+            </button>
+          ))}
+        </div>
       </div>
 
+      {/* ───────── Vue LISTE ───────── */}
+      {view === 'list' && (
+      <>
       {/* Skeletons */}
       {loading && (
         <div className="flex flex-col gap-3">
@@ -716,6 +776,32 @@ const { favs, toggle, remove, isFav } = useFavorites()
         Un spot qui manque ?{' '}
         <a href="/suggerer" className="underline underline-offset-2 hover:text-text transition-colors">Suggère-le</a>
       </p>
+      </>
+      )}
+
+      {/* ───────── Vue CARTE ───────── */}
+      {view === 'map' && (
+        <div className="rounded-2xl overflow-hidden relative"
+          style={{ height: 'calc(100vh - 230px)', minHeight: 360, border: '1px solid rgba(255,255,255,0.1)' }}>
+          {mapLoading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center" style={{ background: '#0e0e0e' }}>
+              <p className="text-muted text-sm font-body">Chargement des spots…</p>
+            </div>
+          )}
+          {!mapLoading && mapSpots && mapSpots.length === 0 && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center text-center px-8" style={{ background: '#0e0e0e' }}>
+              <p className="text-muted text-sm font-body">Aucun spot géolocalisé dans cette catégorie pour l&apos;instant.</p>
+            </div>
+          )}
+          {mapSpots && mapSpots.length > 0 && (
+            <MapView
+              spots={mapSpots}
+              selectedId={activeSpot?.id ?? null}
+              onSelect={(s) => setActiveSpot(s)}
+            />
+          )}
+        </div>
+      )}
 
       {/* Bottom sheet */}
       {activeSpot && <SpotSheet spot={activeSpot} onClose={() => setActiveSpot(null)} />}
