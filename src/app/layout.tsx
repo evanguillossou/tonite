@@ -18,10 +18,8 @@ export const metadata: Metadata = {
   title: 'Tonite — Paris Nightlife',
   description: 'Découvre les meilleurs spots nightlife à Paris selon ton mood.',
   manifest: '/manifest.json',
-  icons: {
-    icon: '/logo_fondnoir.png',
-    apple: '/logo_fondnoir.png',
-  },
+  // Favicon & apple-touch-icon gérés par la convention App Router :
+  // src/app/icon.png et src/app/apple-icon.png (générés depuis le logo).
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
