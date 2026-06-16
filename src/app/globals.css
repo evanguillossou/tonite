@@ -150,3 +150,7 @@ html, body {
 
 /* ── Safe area ── */
 .pb-safe { padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); }
+
+/* ── Masque la barre de défilement (rangées horizontales) ── */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

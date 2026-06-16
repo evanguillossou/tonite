@@ -15,12 +15,10 @@ const TYPES_BY_CATEGORIE: Record<string, string[]> = {
 // Vérifie si un spot est ouvert maintenant (même logique que côté client)
 type Period = { open: { day: number; time: string }; close?: { day: number; time: string } }
 
-function isOpenNow(horaires: unknown): boolean {
+// Vérifie si un spot est ouvert un jour (0=dimanche) à une heure (HHMM) donnés.
+function isOpenAt(horaires: unknown, day: number, time: number): boolean {
   const periods = horaires as Period[] | null
   if (!periods || periods.length === 0) return false
-  const now = new Date()
-  const day = now.getDay()
-  const time = now.getHours() * 100 + now.getMinutes()
   if (periods.length === 1 && !periods[0].close) return true
   for (const p of periods) {
     if (!p.close) continue
@@ -35,12 +33,18 @@ function isOpenNow(horaires: unknown): boolean {
   return false
 }
 
+function isOpenNow(horaires: unknown): boolean {
+  const now = new Date()
+  return isOpenAt(horaires, now.getDay(), now.getHours() * 100 + now.getMinutes())
+}
+
 async function fetchFromArr(
   supabase: ReturnType<typeof createAdminClient>,
   arrList: number[],
   filters: {
     types?: string[]
     requirePhoto?: boolean
+    budgets?: number[]
   },
   seenIds: Set<string>,
   limit: number
@@ -50,6 +54,7 @@ async function fetchFromArr(
     if (collected.length >= limit) break
     let q = supabase.from('spots').select('*').eq('actif', true).eq('arrondissement', a)
     if (filters.types && filters.types.length > 0) q = q.in('type', filters.types)
+    if (filters.budgets && filters.budgets.length > 0) q = q.in('budget', filters.budgets)
     if (filters.requirePhoto) q = q.not('photo_url', 'is', null)
     q = q.limit(30)
     const { data } = await q
@@ -72,6 +77,15 @@ export async function GET(req: NextRequest) {
   const lat = searchParams.get('lat') ? Number(searchParams.get('lat')) : null
   const lng = searchParams.get('lng') ? Number(searchParams.get('lng')) : null
   const arr = searchParams.get('arr') ? Number(searchParams.get('arr')) : null
+
+  // Filtre budget (1-3), CSV ; vide = tous
+  const budgets = (searchParams.get('budget') || '')
+    .split(',').map(Number).filter(n => n >= 1 && n <= 3)
+
+  // Filtre « ouvert à un horaire choisi » : openAt=HHMM & openAtDay=0-6
+  const openAtTime = searchParams.get('openAt') ? parseInt(searchParams.get('openAt')!) : null
+  const openAtDay  = searchParams.get('openAtDay') != null ? Number(searchParams.get('openAtDay')) : null
+  const hasOpenAt  = openAtTime != null && openAtDay != null && !Number.isNaN(openAtTime) && !Number.isNaN(openAtDay)
 
   const supabase = createAdminClient()
 
@@ -99,37 +113,39 @@ export async function GET(req: NextRequest) {
 
   // ── Mode carte : tous les spots de la catégorie avec coordonnées GPS ──
   if (searchParams.get('all') === 'true') {
-    const { data } = await supabase
+    let query = supabase
       .from('spots')
       .select('*')
       .eq('actif', true)
       .in('type', types)
       .not('coordonnees_lat', 'is', null)
       .not('coordonnees_lng', 'is', null)
-      .limit(500)
+    if (budgets.length > 0) query = query.in('budget', budgets)
+    const { data } = await query.limit(500)
     let list = (data || []) as Record<string, unknown>[]
     if (openNow) list = list.filter(s => isOpenNow(s.horaires))
+    else if (hasOpenAt) list = list.filter(s => isOpenAt(s.horaires, openAtDay!, openAtTime!))
     return NextResponse.json(list)
   }
 
   // ── Passes avec photo obligatoire ──
-  collected.push(...await fetchFromArr(supabase, nearbyArrs, { types, requirePhoto: true }, seenIds, 9))
+  collected.push(...await fetchFromArr(supabase, nearbyArrs, { types, requirePhoto: true, budgets }, seenIds, 9))
 
   if (collected.length < 3) {
-    collected.push(...await fetchFromArr(supabase, extendedArrs, { types, requirePhoto: true }, seenIds, 9))
+    collected.push(...await fetchFromArr(supabase, extendedArrs, { types, requirePhoto: true, budgets }, seenIds, 9))
   }
 
   if (collected.length < 3) {
-    collected.push(...await fetchFromArr(supabase, arrByProximity, { types, requirePhoto: true }, seenIds, 9))
+    collected.push(...await fetchFromArr(supabase, arrByProximity, { types, requirePhoto: true, budgets }, seenIds, 9))
   }
 
   // ── Passes sans contrainte photo (fallback) ──
   if (collected.length < 3) {
-    collected.push(...await fetchFromArr(supabase, nearbyArrs, { types }, seenIds, 9))
+    collected.push(...await fetchFromArr(supabase, nearbyArrs, { types, budgets }, seenIds, 9))
   }
 
   if (collected.length < 3) {
-    collected.push(...await fetchFromArr(supabase, arrByProximity, { types }, seenIds, 9))
+    collected.push(...await fetchFromArr(supabase, arrByProximity, { types, budgets }, seenIds, 9))
   }
 
   // Trier : spots avec photo en premier, puis par distance si géoloc dispo
@@ -157,6 +173,12 @@ export async function GET(req: NextRequest) {
   // Si openNow : ne garder que les spots ouverts maintenant
   if (openNow) {
     const openResults = result.filter(s => isOpenNow(s.horaires))
+    return NextResponse.json(openResults.slice(0, 3))
+  }
+
+  // Si openAt : ne garder que les spots ouverts à l'horaire choisi
+  if (hasOpenAt) {
+    const openResults = result.filter(s => isOpenAt(s.horaires, openAtDay!, openAtTime!))
     return NextResponse.json(openResults.slice(0, 3))
   }
 

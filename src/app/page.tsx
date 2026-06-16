@@ -4,51 +4,40 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { arrondissementsByDistance } from '@/lib/geo'
 
-type Categorie = 'bar' | 'terrasse' | 'bouffe' | 'clubbing'
+// Créneaux horaires proposés (en plus de « Maintenant »).
+const HEURES = [20, 21, 22, 23, 0, 1, 2]
 
-const categories = [
-  {
-    value: 'bar' as Categorie,
-    label: 'Bar d\'ambiance',
-    desc: 'Comptoir, bières, cocktails',
-    emoji: '🍸',
-    active: true,
-  },
-  {
-    value: 'terrasse' as Categorie,
-    label: 'En terrasse',
-    desc: 'Soleil & plein air',
-    emoji: '☀️',
-    active: false,
-  },
-  {
-    value: 'bouffe' as Categorie,
-    label: 'Bonne bouffe',
-    desc: 'Bistrots, restos, planches',
-    emoji: '🍽️',
-    active: false,
-  },
-  {
-    value: 'clubbing' as Categorie,
-    label: 'Clubbing',
-    desc: 'Dancefloor & DJ sets',
-    emoji: '🎧',
-    active: false,
-  },
-]
+// Résout un créneau (heure 0-23) en { jour, heure HHMM } pour la prochaine occurrence.
+// Si l'heure est déjà passée aujourd'hui (ex. il est 23h et on choisit 1h), on bascule à demain.
+function resolveHeure(hour: number): { day: number; time: number } {
+  const now = new Date()
+  const target = new Date()
+  target.setHours(hour, 0, 0, 0)
+  if (target.getTime() <= now.getTime()) target.setDate(target.getDate() + 1)
+  return { day: target.getDay(), time: hour * 100 }
+}
 
 export default function HomePage() {
   const router = useRouter()
-  const [categorie, setCategorie] = useState<Categorie | null>(null)
 
   const [geoStatus, setGeoStatus] = useState<'idle' | 'loading' | 'ok' | 'denied' | 'unavailable' | 'https_required'>('idle')
   const [geoError, setGeoError] = useState<string | null>(null)
   const [userLat, setUserLat] = useState<number | null>(null)
   const [userLng, setUserLng] = useState<number | null>(null)
   const [arrondissement, setArrondissement] = useState<string>('')
+
+  // Quand : 'now' ou une heure (0-23)
+  const [quand, setQuand] = useState<'now' | number>('now')
+  // Budget : sous-ensemble de [1,2,3] ; vide = tous
+  const [budgets, setBudgets] = useState<number[]>([])
+
   const [loading, setLoading] = useState(false)
 
-  const ready = categorie && arrondissement
+  const ready = !!arrondissement
+
+  function toggleBudget(b: number) {
+    setBudgets((prev) => prev.includes(b) ? prev.filter((x) => x !== b) : [...prev, b])
+  }
 
   function requestGeo() {
     if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
@@ -96,12 +85,25 @@ export default function HomePage() {
   function handleSubmit() {
     if (!ready) return
     setLoading(true)
-    const params = new URLSearchParams({ categorie: categorie! })
+    const params = new URLSearchParams({ categorie: 'bar' })
     if (geoStatus === 'ok' && userLat && userLng) {
       params.set('lat', String(userLat))
       params.set('lng', String(userLng))
     }
     if (arrondissement) params.set('arr', arrondissement)
+
+    // Quand
+    if (quand === 'now') {
+      params.set('openNow', 'true')
+    } else {
+      const { day, time } = resolveHeure(quand)
+      params.set('openAt', String(time))
+      params.set('openAtDay', String(day))
+    }
+
+    // Budget
+    if (budgets.length > 0) params.set('budget', [...budgets].sort().join(','))
+
     router.push(`/results?${params.toString()}`)
   }
 
@@ -124,22 +126,38 @@ export default function HomePage() {
 
       <div className="relative z-10 flex flex-col min-h-screen px-5 pt-10 pb-safe max-w-lg mx-auto">
 
-        {/* Header */}
-        <header className="fade-in mb-10">
+        {/* Header éditorial */}
+        <header className="fade-in mb-9">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="Tonite" className="h-14 w-auto mb-6" />
           <h1 className="font-display font-bold leading-[1.1] text-text" style={{ fontSize: 'clamp(1.9rem, 7.5vw, 2.6rem)' }}>
-            Trouve ton{' '}
-            <span style={{ color: '#F195B8' }}>adresse parisienne</span>
-            {' '}du soir
+            Les meilleurs spots{' '}
+            <span style={{ color: '#F195B8' }}>autour de vous</span>
           </h1>
-          <p className="text-muted text-sm mt-2 font-body">Des propositions en moins de 30 secondes</p>
+          <p className="text-muted text-sm mt-3 font-body leading-relaxed">
+            Pas un annuaire. Une sélection de bars où l&apos;on a envie de boire un verre — près de vous, ouverts quand vous voulez.
+          </p>
         </header>
 
         <div className="flex flex-col gap-8 flex-1">
 
-          {/* Localisation */}
+          {/* Quand */}
           <section className="fade-up delay-1">
+            <Label>Quand tu veux boire un verre</Label>
+            <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
+              <Chip selected={quand === 'now'} onClick={() => setQuand('now')}>
+                Maintenant
+              </Chip>
+              {HEURES.map((h) => (
+                <Chip key={h} selected={quand === h} onClick={() => setQuand(h)}>
+                  {h}h
+                </Chip>
+              ))}
+            </div>
+          </section>
+
+          {/* Où */}
+          <section className="fade-up delay-2">
             <Label>Où tu es</Label>
             <div className="flex flex-col gap-2">
               <button
@@ -196,32 +214,24 @@ export default function HomePage() {
             </div>
           </section>
 
-          {/* Catégories */}
-          <section className="fade-up delay-2">
-            <Label>Ce soir je veux</Label>
-            <div className="grid grid-cols-2 gap-3">
-              {categories.map((cat) => {
-                const sel = categorie === cat.value
+          {/* Budget */}
+          <section className="fade-up delay-3">
+            <Label>Budget <span style={{ color: '#444', letterSpacing: 0 }}>· optionnel</span></Label>
+            <div className="grid grid-cols-3 gap-2">
+              {[1, 2, 3].map((b) => {
+                const sel = budgets.includes(b)
                 return (
                   <button
-                    key={cat.value}
-                    onClick={() => cat.active && setCategorie(cat.value)}
-                    disabled={!cat.active}
-                    className="flex flex-col items-start p-4 rounded-2xl transition-all text-left relative overflow-hidden"
+                    key={b}
+                    onClick={() => toggleBudget(b)}
+                    className="py-3 rounded-xl text-center transition-all font-display font-semibold"
                     style={{
                       border: sel ? '1px solid #F195B8' : '1px solid #2A2A2A',
                       background: sel ? 'rgba(241,149,184,0.08)' : 'transparent',
-                      opacity: cat.active ? 1 : 0.4,
-                      cursor: cat.active ? 'pointer' : 'not-allowed',
+                      color: sel ? '#F195B8' : '#888',
                     }}
                   >
-                    <span className="text-2xl mb-2">{cat.emoji}</span>
-                    <span className="text-sm font-display font-semibold" style={{ color: sel ? '#F195B8' : '#ccc' }}>
-                      {cat.label}
-                    </span>
-                    <span className="text-[11px] mt-0.5 font-body" style={{ color: sel ? '#999' : '#444' }}>
-                      {cat.active ? cat.desc : 'Bientôt'}
-                    </span>
+                    {'€'.repeat(b)}
                   </button>
                 )
               })}
@@ -245,7 +255,7 @@ export default function HomePage() {
               cursor: 'not-allowed',
             }}
           >
-            {loading ? 'Recherche…' : 'Trouve mon spot →'}
+            {loading ? 'Recherche…' : 'Voir les spots →'}
           </button>
           <p className="text-center text-muted text-xs mt-4 font-body">
             Pas de compte.{' '}
@@ -257,6 +267,22 @@ export default function HomePage() {
 
       </div>
     </main>
+  )
+}
+
+function Chip({ children, selected, onClick }: { children: React.ReactNode; selected: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="shrink-0 px-4 py-2.5 rounded-full text-sm font-body font-medium transition-all"
+      style={{
+        border: selected ? '1px solid #F195B8' : '1px solid #2A2A2A',
+        background: selected ? 'rgba(241,149,184,0.10)' : 'transparent',
+        color: selected ? '#F195B8' : '#999',
+      }}
+    >
+      {children}
+    </button>
   )
 }
 

@@ -572,13 +572,18 @@ function ResultsContent() {
   const lat = searchParams.get('lat')
   const lng = searchParams.get('lng')
   const arr = searchParams.get('arr')
+  const budget = searchParams.get('budget')
+  const openAt = searchParams.get('openAt')
+  const openAtDay = searchParams.get('openAtDay')
+  const openAtHour = openAt ? Math.floor(parseInt(openAt) / 100) : null
 
   const [spots, setSpots]           = useState<SpotWithDist[]>([])
   const [loading, setLoading]       = useState(true)
   const [excludeIds, setExcludeIds] = useState<string[]>([])
   const [error, setError]           = useState<string | null>(null)
   const [activeSpot, setActiveSpot] = useState<SpotWithDist | null>(null)
-  const [openNow, setOpenNow]       = useState(false)
+  // « ouvert » actif par défaut si un créneau a été choisi sur l'accueil
+  const [openNow, setOpenNow]       = useState(searchParams.get('openNow') === 'true' || !!openAt)
   const [showFavs, setShowFavs]     = useState(false)
   const [view, setView]             = useState<'list' | 'map'>('list')
   const [mapSpots, setMapSpots]     = useState<SpotWithDist[] | null>(null)
@@ -591,7 +596,11 @@ const { favs, toggle, remove, isFav } = useFavorites()
       const params = new URLSearchParams({ categorie, all: 'true' })
       if (lat && lng) { params.set('lat', lat); params.set('lng', lng) }
       if (arr) params.set('arr', arr)
-      if (withOpenNow) params.set('openNow', 'true')
+      if (budget) params.set('budget', budget)
+      if (withOpenNow) {
+        if (openAt && openAtDay != null) { params.set('openAt', openAt); params.set('openAtDay', openAtDay) }
+        else params.set('openNow', 'true')
+      }
       const res = await fetch(`/api/spots?${params}`)
       if (!res.ok) throw new Error()
       setMapSpots(await res.json())
@@ -600,7 +609,7 @@ const { favs, toggle, remove, isFav } = useFavorites()
     } finally {
       setMapLoading(false)
     }
-  }, [categorie, lat, lng, arr])
+  }, [categorie, lat, lng, arr, budget, openAt, openAtDay])
 
   function switchView(v: 'list' | 'map') {
     setView(v)
@@ -614,7 +623,11 @@ const { favs, toggle, remove, isFav } = useFavorites()
       const params = new URLSearchParams({ categorie, exclude: exclude.join(',') })
       if (lat && lng) { params.set('lat', lat); params.set('lng', lng) }
       if (arr) params.set('arr', arr)
-      if (withOpenNow) params.set('openNow', 'true')
+      if (budget) params.set('budget', budget)
+      if (withOpenNow) {
+        if (openAt && openAtDay != null) { params.set('openAt', openAt); params.set('openAtDay', openAtDay) }
+        else params.set('openNow', 'true')
+      }
       const res = await fetch(`/api/spots?${params}`)
       if (!res.ok) throw new Error()
       const data = await res.json()
@@ -625,9 +638,10 @@ const { favs, toggle, remove, isFav } = useFavorites()
     } finally {
       setLoading(false)
     }
-  }, [categorie, lat, lng, arr])
+  }, [categorie, lat, lng, arr, budget, openAt, openAtDay])
 
-  useEffect(() => { fetchSpots([]) }, [fetchSpots])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchSpots([], openNow) }, [fetchSpots])
 
   const categorieLabel: Record<string, string> = {
     bar: 'Bar d\'ambiance',
@@ -643,7 +657,7 @@ const { favs, toggle, remove, isFav } = useFavorites()
       <div className="flex items-center justify-between mb-8 fade-in">
         <button onClick={() => router.push('/')}
           className="flex items-center gap-2 text-muted text-sm font-body hover:text-text transition-colors">
-          ← Mood
+          ← Retour
         </button>
         <ToniteWordmark />
         <div className="w-16" />
@@ -651,12 +665,14 @@ const { favs, toggle, remove, isFav } = useFavorites()
 
       {/* Titre */}
       <header className="mb-5 fade-up">
-        <p className="text-[11px] tracking-[0.2em] text-muted uppercase mb-2 font-body">Ce soir pour toi</p>
+        <p className="text-[11px] tracking-[0.2em] text-muted uppercase mb-2 font-body">Notre sélection</p>
         <h1 className="font-display font-bold text-2xl text-text">
           {categorieLabel[categorie] || categorie}
         </h1>
-        {arr  && <p className="text-muted text-xs mt-1 font-body">{arr}e arrondissement</p>}
-        {!arr && lat && lng && <p className="text-muted text-xs mt-1 font-body">Près de toi</p>}
+        <p className="text-muted text-xs mt-1 font-body">
+          {arr ? `${arr}e arrondissement` : (lat && lng ? 'Près de toi' : 'Paris')}
+          {budget && ` · ${budget.split(',').map((b) => '€'.repeat(Number(b))).join(' / ')}`}
+        </p>
       </header>
 
       {/* Toggles : ouvert maintenant + Liste/Carte */}
@@ -682,7 +698,7 @@ const { favs, toggle, remove, isFav } = useFavorites()
           }}
         >
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: openNow ? '#6fcf8a' : '#444', display: 'inline-block', flexShrink: 0 }} />
-          Ouvert maintenant
+          {openAtHour != null ? `Ouvert vers ${openAtHour}h` : 'Ouvert maintenant'}
         </button>
 
         {/* Segmented control Liste / Carte */}
@@ -748,7 +764,9 @@ const { favs, toggle, remove, isFav } = useFavorites()
           ))}
           {openNow && spots.length === 0 && !loading && (
             <div className="text-center py-8">
-              <p className="text-muted text-sm font-body">Aucun spot ouvert en ce moment.</p>
+              <p className="text-muted text-sm font-body">
+                {openAtHour != null ? `Aucun spot ouvert vers ${openAtHour}h.` : 'Aucun spot ouvert en ce moment.'}
+              </p>
               <button onClick={() => { setOpenNow(false); fetchSpots([]) }} className="text-xs font-body underline mt-2" style={{ color: '#F195B8' }}>
                 Voir tous les spots
               </button>
@@ -761,7 +779,7 @@ const { favs, toggle, remove, isFav } = useFavorites()
       {!loading && spots.length > 0 && (
         <div className="mt-6">
           <button
-            onClick={() => fetchSpots(excludeIds)}
+            onClick={() => fetchSpots(excludeIds, openNow)}
             className="w-full py-3.5 rounded-full font-display font-medium text-sm text-text transition-all"
             style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
             onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'rgba(255,107,53,0.4)')}
