@@ -7,13 +7,14 @@ import dynamic from 'next/dynamic'
 import type { Spot } from '@/types'
 
 // ── Palette DA ────────────────────────────────────────────────
+// Strictement la palette de l'accueil : rose / vert encre / jaune / crème.
 const INK = '#1A2C2A'
 const PINK = '#F4BCD8'
-const DEEPPINK = '#D4649A'
+const YELLOW = '#F9D56E'
 const CREAM = '#FBF4EC'
-const GREEN = '#1F7A4D'
-const BORDER = '#E6DCCB'
-const MUTED = '#6E7B74'
+const LINE = `1.5px solid ${INK}`       // contour signature (comme l'accueil)
+const SOFT = 'rgba(26,44,42,0.35)'     // séparateurs discrets
+const MUTED = 'rgba(26,44,42,0.7)'     // texte secondaire : vert atténué, jamais gris
 
 const MapView = dynamic(() => import('@/components/MapView'), {
   ssr: false,
@@ -152,7 +153,14 @@ async function shareSpot(spot: Spot) {
 
 // Badge « type » réutilisable (rose plein, encre)
 function typeBadgeStyle(): React.CSSProperties {
-  return { background: PINK, color: INK }
+  return { background: PINK, color: INK, border: LINE }
+}
+
+// Statut d'ouverture : pastille jaune si ouvert, vert atténué sinon
+function statusStyle(open: boolean): React.CSSProperties {
+  return open
+    ? { background: YELLOW, color: INK, border: LINE, borderRadius: 999, padding: '2px 10px', display: 'inline-block', alignSelf: 'flex-start' }
+    : { color: MUTED }
 }
 
 // ── Bottom Sheet ──────────────────────────────────────────────
@@ -176,8 +184,8 @@ function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void 
       <div
         className="fixed bottom-0 left-0 right-0 z-50 max-w-lg mx-auto rounded-t-3xl overflow-hidden"
         style={{
-          background: '#FFFFFF',
-          border: `1px solid ${BORDER}`,
+          background: CREAM,
+          border: LINE,
           borderBottom: 'none',
           animation: 'slideUp 280ms cubic-bezier(0.32,0.72,0,1) both',
           paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))',
@@ -187,32 +195,33 @@ function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void 
         {(() => {
           const photos = spot.photos && spot.photos.length > 0 ? spot.photos : spot.photo_url ? [spot.photo_url] : []
           if (photos.length === 0) return (
-            <div className="relative h-16 flex items-end justify-end px-4 pb-3" style={{ background: PINK }}>
+            <div className="relative h-16 flex items-end justify-end px-4 pb-3" style={{ background: PINK, borderBottom: LINE }}>
               <button onClick={onClose} className="text-sm font-body" style={{ color: INK }}>✕ Fermer</button>
             </div>
           )
           return (
-            <div className="relative w-full h-52 overflow-hidden" style={{ background: CREAM }}>
+            <div className="relative w-full h-52 overflow-hidden" style={{ background: PINK, borderBottom: LINE }}>
               <div
                 className="flex h-full transition-transform duration-300 ease-out"
                 style={{ width: `${photos.length * 100}%`, transform: `translateX(-${(photoIdx % photos.length) * (100 / photos.length)}%)` }}
               >
                 {photos.map((src, i) => (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img key={i} src={src} alt={spot.nom} className="h-full object-cover flex-shrink-0"
-                    style={{ width: `${100 / photos.length}%` }} />
+                  <img key={i} src={src} alt="" className="h-full object-cover flex-shrink-0"
+                    style={{ width: `${100 / photos.length}%` }}
+                    onError={(e) => { e.currentTarget.style.visibility = 'hidden' }} />
                 ))}
               </div>
               <button onClick={onClose} className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm"
-                style={{ background: 'rgba(26,44,42,0.55)' }}>✕</button>
+                style={{ background: INK }}>✕</button>
               {photos.length > 1 && (
                 <>
                   <button onClick={() => setPhotoIdx(i => (i - 1 + photos.length) % photos.length)}
                     className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center text-white text-xs"
-                    style={{ background: 'rgba(26,44,42,0.55)' }}>‹</button>
+                    style={{ background: INK }}>‹</button>
                   <button onClick={() => setPhotoIdx(i => (i + 1) % photos.length)}
                     className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center text-white text-xs"
-                    style={{ background: 'rgba(26,44,42,0.55)' }}>›</button>
+                    style={{ background: INK }}>›</button>
                   <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1">
                     {photos.map((_, i) => (
                       <span key={i} className="w-1.5 h-1.5 rounded-full transition-all"
@@ -233,12 +242,12 @@ function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void 
               <h2 className="font-display font-bold text-xl text-text leading-tight">{spot.nom}</h2>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <span className="text-muted text-xs font-body">{spot.arrondissement}e arr.</span>
-                <span className="text-xs" style={{ color: BORDER }}>·</span>
+                <span className="text-xs" style={{ color: SOFT }}>·</span>
                 <span className="text-muted text-xs font-body">{budgetLabel(spot.budget)}</span>
                 {distance && (
                   <>
-                    <span className="text-xs" style={{ color: BORDER }}>·</span>
-                    <span className="text-xs font-medium font-body" style={{ color: DEEPPINK }}>{distance}</span>
+                    <span className="text-xs" style={{ color: SOFT }}>·</span>
+                    <span className="text-xs font-medium font-body" style={{ color: INK }}>{distance}</span>
                   </>
                 )}
               </div>
@@ -263,7 +272,7 @@ function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void 
               </p>
             )}
             {status && (
-              <p className="text-xs font-body font-medium" style={{ color: status.open ? GREEN : MUTED }}>
+              <p className="text-xs font-body font-medium" style={statusStyle(status.open)}>
                 {status.label}
               </p>
             )}
@@ -274,7 +283,7 @@ function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void 
             <div className="flex flex-wrap gap-1.5">
               {spot.tags.map((tag) => (
                 <span key={tag} className="px-2.5 py-1 rounded-full text-[11px] font-body"
-                  style={{ background: 'rgba(26,44,42,0.05)', border: `1px solid ${BORDER}`, color: INK }}>
+                  style={{ background: 'transparent', border: LINE, color: INK }}>
                   {tag}
                 </span>
               ))}
@@ -286,14 +295,14 @@ function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void 
             <button
               onClick={onClose}
               className="flex-1 py-3.5 rounded-full font-display font-medium text-sm text-text transition-all"
-              style={{ background: CREAM, border: `1px solid ${BORDER}` }}
+              style={{ background: CREAM, border: LINE }}
             >
               Pas pour moi
             </button>
             <button
               onClick={() => shareSpot(spot)}
               className="py-3.5 px-4 rounded-full font-display font-medium text-sm text-text transition-all"
-              style={{ background: CREAM, border: `1px solid ${BORDER}` }}
+              style={{ background: CREAM, border: LINE }}
               title="Partager"
             >
               ↗
@@ -336,12 +345,12 @@ function FavsPanel({ favs, onRemove, onClose }: { favs: Spot[]; onRemove: (id: s
       <div className="fixed inset-0 z-40" onClick={onClose} style={{ background: 'rgba(26,44,42,0.5)', backdropFilter: 'blur(2px)' }} />
       <div
         className="fixed inset-0 z-50 flex flex-col max-w-lg mx-auto"
-        style={{ background: CREAM, animation: 'slideUp 280ms cubic-bezier(0.32,0.72,0,1) both' }}
+        style={{ background: PINK, animation: 'slideUp 280ms cubic-bezier(0.32,0.72,0,1) both' }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-10 pb-3">
           <h2 className="font-display font-bold text-lg text-text">Mes spots</h2>
-          <button onClick={onClose} className="text-muted text-sm font-body px-3 py-1.5 rounded-full" style={{ border: `1px solid ${BORDER}` }}>
+          <button onClick={onClose} className="text-muted text-sm font-body px-3 py-1.5 rounded-full" style={{ border: LINE }}>
             Fermer
           </button>
         </div>
@@ -358,9 +367,9 @@ function FavsPanel({ favs, onRemove, onClose }: { favs: Spot[]; onRemove: (id: s
                   background: INK,
                   color: PINK,
                 } : {
-                  background: '#FFFFFF',
-                  border: `1px solid ${BORDER}`,
-                  color: MUTED,
+                  background: 'transparent',
+                  border: LINE,
+                  color: INK,
                 }}
               >
                 {s.nom.length > 18 ? s.nom.slice(0, 16) + '…' : s.nom}
@@ -374,9 +383,10 @@ function FavsPanel({ favs, onRemove, onClose }: { favs: Spot[]; onRemove: (id: s
           <div className="flex-1 overflow-y-auto">
             {/* Photo */}
             {spot.photo_url ? (
-              <div className="relative w-full h-52 overflow-hidden mt-3" style={{ background: CREAM }}>
+              <div className="relative w-full h-52 overflow-hidden mt-3" style={{ background: PINK, borderTop: LINE, borderBottom: LINE }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={spot.photo_url} alt={spot.nom} className="w-full h-full object-cover" />
+                <img src={spot.photo_url} alt="" className="w-full h-full object-cover"
+                  onError={(e) => { e.currentTarget.style.display = 'none' }} />
               </div>
             ) : (
               <div className="h-4" />
@@ -389,7 +399,7 @@ function FavsPanel({ favs, onRemove, onClose }: { favs: Spot[]; onRemove: (id: s
                   <h3 className="font-display font-bold text-xl text-text leading-tight">{spot.nom}</h3>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <span className="text-muted text-xs font-body">{spot.arrondissement}e arr.</span>
-                    <span className="text-xs" style={{ color: BORDER }}>·</span>
+                    <span className="text-xs" style={{ color: SOFT }}>·</span>
                     <span className="text-muted text-xs font-body">{'€'.repeat(spot.budget)}</span>
                   </div>
                 </div>
@@ -397,7 +407,7 @@ function FavsPanel({ favs, onRemove, onClose }: { favs: Spot[]; onRemove: (id: s
                   <button
                     onClick={() => onRemove(spot.id)}
                     className="text-base leading-none transition-colors"
-                    style={{ color: DEEPPINK }}
+                    style={{ color: INK }}
                     title="Retirer des favoris"
                   >
                     ♥
@@ -414,14 +424,14 @@ function FavsPanel({ favs, onRemove, onClose }: { favs: Spot[]; onRemove: (id: s
               )}
 
               {/* Adresse + horaires */}
-              <div className="flex flex-col gap-1.5 py-3 border-y" style={{ borderColor: BORDER }}>
+              <div className="flex flex-col gap-1.5 py-3 border-y" style={{ borderColor: INK }}>
                 {spot.adresse && (
                   <p className="text-muted text-xs font-body flex items-center gap-1.5">
                     <span>📍</span> {spot.adresse}
                   </p>
                 )}
                 {status && (
-                  <p className="text-xs font-body font-medium" style={{ color: status.open ? GREEN : MUTED }}>
+                  <p className="text-xs font-body font-medium" style={statusStyle(status.open)}>
                     {status.label}
                   </p>
                 )}
@@ -432,7 +442,7 @@ function FavsPanel({ favs, onRemove, onClose }: { favs: Spot[]; onRemove: (id: s
                 <div className="flex flex-wrap gap-1.5">
                   {spot.tags.map(tag => (
                     <span key={tag} className="px-2.5 py-1 rounded-full text-[11px] font-body"
-                      style={{ background: 'rgba(26,44,42,0.05)', border: `1px solid ${BORDER}`, color: INK }}>
+                      style={{ background: 'transparent', border: LINE, color: INK }}>
                       {tag}
                     </span>
                   ))}
@@ -472,18 +482,19 @@ function SpotCard({ spot, index, onTap, isFav, onFavToggle }: {
       onClick={onTap}
       className="glass p-5 flex flex-col gap-3 fade-up cursor-pointer active:scale-[0.98]"
       style={{ animationDelay: `${index * 80}ms`, transition: 'transform 150ms ease, box-shadow 200ms ease' }}
-      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(26,44,42,0.14)' }}
-      onMouseLeave={(e) => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}
+      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)' }}
+      onMouseLeave={(e) => { e.currentTarget.style.transform = '' }}
     >
       {/* Photo miniature si disponible */}
       {spot.photo_url && (
-        <div className="relative w-full h-32 rounded-xl overflow-hidden" style={{ background: CREAM }}>
+        <div className="relative w-full h-32 rounded-xl overflow-hidden" style={{ background: PINK, border: LINE }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={spot.photo_url} alt={spot.nom} className="w-full h-full object-cover" />
+          <img src={spot.photo_url} alt="" className="w-full h-full object-cover"
+            onError={(e) => { e.currentTarget.style.display = 'none' }} />
           <button
             onClick={onFavToggle}
             className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center text-base transition-all"
-            style={{ background: 'rgba(26,44,42,0.5)', color: isFav ? PINK : 'rgba(255,255,255,0.85)' }}
+            style={{ background: INK, color: isFav ? PINK : CREAM }}
           >
             {isFav ? '♥' : '♡'}
           </button>
@@ -496,12 +507,12 @@ function SpotCard({ spot, index, onTap, isFav, onFavToggle }: {
           <h2 className="font-display font-bold text-lg text-text leading-tight truncate">{spot.nom}</h2>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             <span className="text-muted text-xs font-body">{spot.arrondissement}e arr.</span>
-            <span className="text-xs" style={{ color: BORDER }}>·</span>
+            <span className="text-xs" style={{ color: SOFT }}>·</span>
             <span className="text-muted text-xs font-body">{budgetLabel(spot.budget)}</span>
             {distance && (
               <>
-                <span className="text-xs" style={{ color: BORDER }}>·</span>
-                <span className="text-xs font-medium font-body" style={{ color: DEEPPINK }}>{distance}</span>
+                <span className="text-xs" style={{ color: SOFT }}>·</span>
+                <span className="text-xs font-medium font-body" style={{ color: INK }}>{distance}</span>
               </>
             )}
           </div>
@@ -511,7 +522,7 @@ function SpotCard({ spot, index, onTap, isFav, onFavToggle }: {
             <button
               onClick={onFavToggle}
               className="text-lg leading-none transition-colors"
-              style={{ color: isFav ? DEEPPINK : 'rgba(26,44,42,0.3)' }}
+              style={{ color: isFav ? INK : 'rgba(26,44,42,0.3)' }}
             >
               {isFav ? '♥' : '♡'}
             </button>
@@ -534,7 +545,7 @@ function SpotCard({ spot, index, onTap, isFav, onFavToggle }: {
         <div className="flex flex-wrap gap-1.5">
           {spot.tags.slice(0, 4).map((tag) => (
             <span key={tag} className="px-2.5 py-1 rounded-full text-[11px] font-body"
-              style={{ background: 'rgba(26,44,42,0.05)', border: `1px solid ${BORDER}`, color: INK }}>
+              style={{ background: 'transparent', border: LINE, color: INK }}>
               {tag}
             </span>
           ))}
@@ -544,7 +555,7 @@ function SpotCard({ spot, index, onTap, isFav, onFavToggle }: {
       {/* Horaires + hint */}
       <div className="flex items-center justify-between mt-1">
         {status ? (
-          <span className="text-[11px] font-body" style={{ color: status.open ? GREEN : MUTED }}>
+          <span className="text-[11px] font-body" style={statusStyle(status.open)}>
             {status.label}
           </span>
         ) : <span />}
@@ -556,7 +567,8 @@ function SpotCard({ spot, index, onTap, isFav, onFavToggle }: {
 
 function ToniteWordmark() {
   return (
-    <span className="font-display font-bold text-xl tracking-wide" style={{ color: INK }}>TONITE</span>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src="/logo_wordmark.png" alt="Tonite" style={{ height: 30, width: 'auto' }} />
   )
 }
 
@@ -663,7 +675,7 @@ function ResultsContent() {
 
       {/* Titre */}
       <header className="mb-5 fade-up">
-        <p className="text-[11px] tracking-[0.2em] text-muted uppercase mb-2 font-body">Notre sélection</p>
+        <p className="text-[10px] tracking-[0.2em] uppercase mb-2 font-body font-medium" style={{ color: INK, opacity: 0.6 }}>Notre sélection</p>
         <h1 className="font-display font-bold text-2xl text-text">
           {categorieLabel[categorie] || categorie}
         </h1>
@@ -686,21 +698,21 @@ function ResultsContent() {
           }}
           className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-body font-medium transition-all"
           style={openNow ? {
-            background: 'rgba(31,122,77,0.12)',
-            border: `1px solid ${GREEN}`,
-            color: GREEN,
+            background: YELLOW,
+            border: LINE,
+            color: INK,
           } : {
-            background: CREAM,
-            border: `1px solid ${BORDER}`,
-            color: MUTED,
+            background: 'transparent',
+            border: LINE,
+            color: INK,
           }}
         >
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: openNow ? GREEN : BORDER, display: 'inline-block', flexShrink: 0 }} />
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: openNow ? INK : 'transparent', border: `1.5px solid ${INK}`, display: 'inline-block', flexShrink: 0 }} />
           {openAtHour != null ? `Ouvert vers ${openAtHour}h` : 'Ouvert maintenant'}
         </button>
 
         {/* Segmented control Liste / Carte */}
-        <div className="flex rounded-full p-0.5 shrink-0" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+        <div className="flex rounded-full p-0.5 shrink-0" style={{ background: 'transparent', border: LINE }}>
           {(['list', 'map'] as const).map((v) => (
             <button
               key={v}
@@ -711,7 +723,7 @@ function ResultsContent() {
                 color: PINK,
               } : {
                 background: 'transparent',
-                color: MUTED,
+                color: INK,
               }}
             >
               {v === 'list' ? '☰ Liste' : '◍ Carte'}
@@ -728,7 +740,7 @@ function ResultsContent() {
         <div className="flex flex-col gap-3">
           {[1,2,3].map((i) => (
             <div key={i} className="h-44 rounded-2xl animate-pulse"
-              style={{ background: 'rgba(26,44,42,0.04)', border: `1px solid ${BORDER}` }} />
+              style={{ background: CREAM, border: LINE, opacity: 0.6 }} />
           ))}
         </div>
       )}
@@ -779,9 +791,7 @@ function ResultsContent() {
           <button
             onClick={() => fetchSpots(excludeIds, openNow)}
             className="w-full py-3.5 rounded-full font-display font-medium text-sm text-text transition-all"
-            style={{ background: CREAM, border: `1px solid ${BORDER}` }}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = INK)}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = BORDER)}
+            style={{ background: CREAM, border: LINE }}
           >
             Autre sélection ↻
           </button>
@@ -798,7 +808,7 @@ function ResultsContent() {
       {/* ───────── Vue CARTE ───────── */}
       {view === 'map' && (
         <div className="rounded-2xl overflow-hidden relative"
-          style={{ height: 'calc(100vh - 230px)', minHeight: 360, border: `1px solid ${BORDER}` }}>
+          style={{ height: 'calc(100vh - 230px)', minHeight: 360, border: LINE }}>
           {mapLoading && (
             <div className="absolute inset-0 z-10 flex items-center justify-center" style={{ background: CREAM }}>
               <p className="text-muted text-sm font-body">Chargement des spots…</p>
@@ -830,7 +840,6 @@ function ResultsContent() {
           style={{
             background: INK,
             color: PINK,
-            boxShadow: '0 6px 20px rgba(26,44,42,0.2)',
           }}
         >
           ♥ Mes spots ({favs.length})

@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 
 function ToniteWordmark() {
   return (
-    <span className="font-display font-bold text-xl tracking-wide" style={{ color: '#1A2C2A' }}>TONITE</span>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src="/logo_wordmark.png" alt="Tonite" style={{ height: 30, width: 'auto' }} />
   )
 }
 
@@ -40,7 +41,7 @@ export default function SuggererPage() {
     return (
       <main className="min-h-screen bg-bg flex flex-col items-center justify-center px-5 text-center max-w-lg mx-auto fade-in">
         <div className="w-16 h-16 rounded-full flex items-center justify-center text-2xl mb-6 font-display"
-          style={{ background: '#F9DCEA', border: '1px solid #1A2C2A', color: '#1A2C2A' }}>
+          style={{ background: '#F9D56E', border: '1.5px solid #1A2C2A', color: '#1A2C2A' }}>
           ✓
         </div>
         <h2 className="font-display font-bold text-2xl text-text mb-3">Merci !</h2>
@@ -106,7 +107,12 @@ export default function SuggererPage() {
           />
         </div>
 
-        {error && <p className="text-xs font-body" style={{ color: '#B0324F' }}>{error}</p>}
+        {error && (
+          <p className="text-xs font-body font-medium rounded-xl px-3 py-2"
+            style={{ background: '#F9D56E', border: '1.5px solid #1A2C2A', color: '#1A2C2A' }}>
+            {error}
+          </p>
+        )}
 
         <button
           type="submit"

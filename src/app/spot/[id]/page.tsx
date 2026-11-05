@@ -112,14 +112,14 @@ export default function SpotPage() {
 
       {/* Photo hero */}
       {spot.photo_url ? (
-        <div className="relative w-full h-64 overflow-hidden" style={{ background: '#FBF4EC' }}>
+        <div className="relative w-full h-64 overflow-hidden" style={{ background: '#F4BCD8', borderBottom: '1.5px solid #1A2C2A' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={spot.photo_url} alt={spot.nom} className="w-full h-full object-cover" />
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 55%, #FBF4EC 100%)' }} />
+          <img src={spot.photo_url} alt="" className="w-full h-full object-cover"
+            onError={(e) => { e.currentTarget.style.display = 'none' }} />
           <button
             onClick={handleBack}
-            className="absolute top-4 left-4 flex items-center gap-1.5 text-sm font-body text-white px-3 py-1.5 rounded-full"
-            style={{ background: 'rgba(26,44,42,0.5)', backdropFilter: 'blur(8px)' }}
+            className="absolute top-4 left-4 flex items-center gap-1.5 text-sm font-body px-3 py-1.5 rounded-full"
+            style={{ background: '#1A2C2A', color: '#F4BCD8' }}
           >
             ← Retour
           </button>
@@ -135,7 +135,8 @@ export default function SpotPage() {
 
         {/* Logo */}
         <div className="flex justify-center mb-2">
-          <span className="font-display font-bold text-sm tracking-wide" style={{ color: '#1A2C2A', opacity: 0.5 }}>TONITE</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo_wordmark.png" alt="Tonite" style={{ height: 26, width: 'auto' }} />
         </div>
 
         {/* Titre */}
@@ -144,32 +145,34 @@ export default function SpotPage() {
             <h1 className="font-display font-bold text-2xl text-text leading-tight">{spot.nom}</h1>
             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
               <span className="text-muted text-xs font-body">{spot.arrondissement}e arrondissement</span>
-              <span className="text-xs" style={{ color: '#E6DCCB' }}>·</span>
+              <span className="text-xs" style={{ color: 'rgba(26,44,42,0.35)' }}>·</span>
               <span className="text-muted text-xs font-body">{budgetLabel(spot.budget)}</span>
             </div>
           </div>
           <span className="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium font-body"
-            style={{ background: '#F4BCD8', color: '#1A2C2A' }}>
+            style={{ background: '#F4BCD8', color: '#1A2C2A', border: '1.5px solid #1A2C2A' }}>
             {spot.type}
           </span>
         </div>
 
         {/* Vibe */}
         {spot.vibe && (
-          <p className="text-base italic font-body leading-relaxed" style={{ color: '#6E7B74' }}>
+          <p className="text-base italic font-body leading-relaxed" style={{ color: 'rgba(26,44,42,0.75)' }}>
             &ldquo;{spot.vibe}&rdquo;
           </p>
         )}
 
         {/* Adresse + horaires */}
-        <div className="flex flex-col gap-2 py-4 border-y" style={{ borderColor: '#E6DCCB' }}>
+        <div className="flex flex-col gap-2 p-4 rounded-2xl" style={{ background: '#FBF4EC', border: '1.5px solid #1A2C2A' }}>
           {spot.adresse && (
             <p className="text-muted text-sm font-body flex items-center gap-2">
               <span>📍</span> {spot.adresse}
             </p>
           )}
           {status && (
-            <p className="text-sm font-body font-medium" style={{ color: status.open ? '#1F7A4D' : '#6E7B74' }}>
+            <p className="text-sm font-body font-medium self-start" style={status.open
+              ? { background: '#F9D56E', color: '#1A2C2A', border: '1.5px solid #1A2C2A', borderRadius: 999, padding: '2px 12px' }
+              : { color: 'rgba(26,44,42,0.7)' }}>
               {status.label}
             </p>
           )}
@@ -180,7 +183,7 @@ export default function SpotPage() {
           <div className="flex flex-wrap gap-2">
             {spot.tags.map((tag) => (
               <span key={tag} className="px-3 py-1.5 rounded-full text-xs font-body"
-                style={{ background: 'rgba(26,44,42,0.05)', border: '1px solid #E6DCCB', color: '#1A2C2A' }}>
+                style={{ background: 'transparent', border: '1.5px solid #1A2C2A', color: '#1A2C2A' }}>
                 {tag}
               </span>
             ))}
@@ -192,7 +195,7 @@ export default function SpotPage() {
           <button
             onClick={handleShare}
             className="flex-1 py-3.5 rounded-full font-display font-medium text-sm transition-all flex items-center justify-center gap-2"
-            style={{ background: '#FBF4EC', border: '1px solid #E6DCCB', color: shared ? '#1F7A4D' : '#1A2C2A' }}
+            style={{ background: shared ? '#F9D56E' : 'transparent', border: '1.5px solid #1A2C2A', color: '#1A2C2A' }}
           >
             {shared ? '✓ Lien copié' : 'Partager'}
           </button>

@@ -4,12 +4,12 @@
 
 /* ── Variables ── */
 :root {
-  --bg: #FBF4EC;        /* crème : canvas de contenu */
-  --card: #FFFFFF;
-  --border: #E6DCCB;
+  --bg: #F4BCD8;        /* rose : canvas (comme l'accueil) */
+  --card: #FBF4EC;      /* crème : cartes / champs */
+  --border: #1A2C2A;    /* contours vert encre */
   --text: #1A2C2A;      /* vert encre */
-  --muted: #6E7B74;
-  --subtle: #CFC5B4;
+  --muted: rgba(26,44,42,0.7);
+  --subtle: rgba(26,44,42,0.35);
   --pink: #F4BCD8;
   --pink-deep: #D99BBE;
   --grad-from: #1A2C2A;
@@ -57,8 +57,8 @@ html, body {
 
 /* ── Carte (ex-glass, désormais à plat) ── */
 .glass {
-  background: #FFFFFF;
-  border: 1px solid var(--border);
+  background: var(--tn-cream);
+  border: 1.5px solid var(--tn-ink);
   border-radius: 16px;
 }
 
@@ -75,7 +75,7 @@ html, body {
 .btn-cta:disabled {
   background: var(--tn-cream);
   color: var(--muted);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--subtle);
   cursor: not-allowed;
 }
 
@@ -114,7 +114,7 @@ html, body {
 .input-style {
   width: 100%;
   background: var(--card);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   border-radius: 12px;
   padding: 14px 16px;
   color: var(--text);
