@@ -22,6 +22,55 @@ const PINK = 'var(--tn-pink)'
 const CREAM = 'var(--tn-cream)'
 const YELLOW = 'var(--tn-yellow)'
 
+// Bandeau bêta : fermable, et ne revient plus une fois fermé (mémorisé dans le navigateur).
+// Pour réafficher un nouveau message à tout le monde plus tard : changer la clé (v1 → v2).
+const BANNER_KEY = 'tonite_banner_beta_v1'
+
+function BetaBanner() {
+  const [show, setShow] = useState(false)
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(BANNER_KEY) !== '1') setShow(true)
+    } catch {
+      setShow(true) // stockage indisponible (navigation privée…) : on l'affiche quand même
+    }
+  }, [])
+
+  function close() {
+    setShow(false)
+    try { localStorage.setItem(BANNER_KEY, '1') } catch { /* tant pis, il reviendra */ }
+  }
+
+  if (!show) return null
+
+  return (
+    <div
+      role="status"
+      className="fade-in mb-6 flex items-start gap-3 rounded-2xl pl-4 pr-2 py-3"
+      style={{ background: CREAM, border: `1.5px solid ${INK}` }}
+    >
+      <span
+        className="shrink-0 mt-px px-2 py-0.5 rounded-full text-[10px] font-body font-semibold tracking-[0.14em] uppercase"
+        style={{ background: YELLOW, color: INK, border: `1.5px solid ${INK}` }}
+      >
+        Bêta
+      </span>
+      <p className="flex-1 text-xs font-body leading-relaxed" style={{ color: INK }}>
+        De nouvelles adresses arrivent chaque semaine. Le meilleur est à venir&nbsp;!
+      </p>
+      <button
+        onClick={close}
+        aria-label="Fermer le message"
+        className="shrink-0 -mt-1 w-8 h-8 rounded-full flex items-center justify-center text-xl leading-none"
+        style={{ color: INK }}
+      >
+        ×
+      </button>
+    </div>
+  )
+}
+
 export default function HomePage() {
   const router = useRouter()
 
@@ -122,6 +171,8 @@ export default function HomePage() {
   return (
     <main className="relative min-h-screen overflow-x-hidden" style={{ background: PINK }}>
       <div className="relative z-10 flex flex-col min-h-screen px-5 pt-10 pb-safe max-w-lg mx-auto">
+
+        <BetaBanner />
 
         {/* Hero */}
         <header className="fade-in mb-8 text-center">
