@@ -35,9 +35,16 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 }
 
+// Applique le thème mémorisé AVANT le premier affichage (sinon flash rose en mode sombre).
+// Clair par défaut ; « sombre » seulement si le visiteur l'a choisi (clé tonite_theme).
+const themeScript = `(function(){try{if(localStorage.getItem('tonite_theme')==='dark'){document.documentElement.setAttribute('data-theme','dark');document.addEventListener('DOMContentLoaded',function(){var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content','#000000');});}}catch(e){}})();`
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={`${spaceGrotesk.variable} ${inter.variable}`}>
+    <html lang="fr" className={`${spaceGrotesk.variable} ${inter.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="antialiased font-body">
         {children}
       </body>

@@ -2,12 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import ThemeToggle from '@/components/ThemeToggle'
+import ThemeLogo from '@/components/ThemeLogo'
 
 function ToniteWordmark() {
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src="/logo_wordmark.png" alt="Tonite" style={{ height: 30, width: 'auto' }} />
-  )
+  return <ThemeLogo variant="wordmark" style={{ height: 30, width: 'auto' }} />
 }
 
 export default function SuggererPage() {
@@ -41,7 +40,7 @@ export default function SuggererPage() {
     return (
       <main className="min-h-screen bg-bg flex flex-col items-center justify-center px-5 text-center max-w-lg mx-auto fade-in">
         <div className="w-16 h-16 rounded-full flex items-center justify-center text-2xl mb-6 font-display"
-          style={{ background: '#F9D56E', border: '1.5px solid #1A2C2A', color: '#1A2C2A' }}>
+          style={{ background: 'var(--c-accent)', border: '1.5px solid var(--c-ink)', color: 'var(--c-on-accent)' }}>
           ✓
         </div>
         <h2 className="font-display font-bold text-2xl text-text mb-3">Merci !</h2>
@@ -60,11 +59,11 @@ export default function SuggererPage() {
       <div className="grid grid-cols-3 items-center mb-10 fade-in">
         <button onClick={() => router.back()}
           className="justify-self-start flex items-center gap-1.5 h-10 px-4 rounded-full text-sm font-body font-medium"
-          style={{ border: '1.5px solid #1A2C2A', color: '#1A2C2A' }}>
+          style={{ border: '1.5px solid var(--c-ink)', color: 'var(--c-ink)' }}>
           ← Retour
         </button>
         <div className="justify-self-center"><ToniteWordmark /></div>
-        <div />
+        <div className="justify-self-end"><ThemeToggle /></div>
       </div>
 
       <header className="mb-8 fade-up">
@@ -110,7 +109,7 @@ export default function SuggererPage() {
 
         {error && (
           <p className="text-xs font-body font-medium rounded-xl px-3 py-2"
-            style={{ background: '#F9D56E', border: '1.5px solid #1A2C2A', color: '#1A2C2A' }}>
+            style={{ background: 'var(--c-accent)', border: '1.5px solid var(--c-ink)', color: 'var(--c-on-accent)' }}>
             {error}
           </p>
         )}

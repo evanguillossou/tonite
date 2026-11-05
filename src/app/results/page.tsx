@@ -5,16 +5,20 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { Suspense } from 'react'
 import dynamic from 'next/dynamic'
 import type { Spot } from '@/types'
+import ThemeToggle from '@/components/ThemeToggle'
+import ThemeLogo from '@/components/ThemeLogo'
 
 // ── Palette DA ────────────────────────────────────────────────
-// Strictement la palette de l'accueil : rose / vert encre / jaune / crème.
-const INK = '#1A2C2A'
-const PINK = '#F4BCD8'
-const YELLOW = '#F9D56E'
-const CREAM = '#FBF4EC'
-const LINE = `1.5px solid ${INK}`       // contour signature (comme l'accueil)
-const SOFT = 'rgba(26,44,42,0.35)'     // séparateurs discrets
-const MUTED = 'rgba(26,44,42,0.7)'     // texte secondaire : vert atténué, jamais gris
+// Couleurs par rôle (palette de l'accueil) : suivent le thème clair / sombre (globals.css)
+const INK = 'var(--c-ink)'             // textes, contours, boutons pleins
+const CANVAS = 'var(--c-canvas)'       // fond de page
+const SURFACE = 'var(--c-surface)'     // cartes, champs
+const ACCENT = 'var(--c-accent)'       // « ouvert », état actif
+const ON_ACCENT = 'var(--c-on-accent)' // texte sur l'accent
+const ON_INK = 'var(--c-on-ink)'       // texte sur bouton plein
+const LINE = `1.5px solid ${INK}`      // contour signature
+const SOFT = 'var(--c-soft)'           // séparateurs discrets
+const MUTED = 'var(--c-muted)'         // texte secondaire
 
 const MapView = dynamic(() => import('@/components/MapView'), {
   ssr: false,
@@ -153,13 +157,13 @@ async function shareSpot(spot: Spot) {
 
 // Badge « type » réutilisable (rose plein, encre)
 function typeBadgeStyle(): React.CSSProperties {
-  return { background: PINK, color: INK, border: LINE }
+  return { background: CANVAS, color: INK, border: LINE }
 }
 
 // Statut d'ouverture : pastille jaune si ouvert, vert atténué sinon
 function statusStyle(open: boolean): React.CSSProperties {
   return open
-    ? { background: YELLOW, color: INK, border: LINE, borderRadius: 999, padding: '2px 10px', display: 'inline-block', alignSelf: 'flex-start' }
+    ? { background: ACCENT, color: ON_ACCENT, border: LINE, borderRadius: 999, padding: '2px 10px', display: 'inline-block', alignSelf: 'flex-start' }
     : { color: MUTED }
 }
 
@@ -181,14 +185,14 @@ function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void 
       <div
         className="fixed inset-0 z-40"
         onClick={onClose}
-        style={{ background: 'rgba(26,44,42,0.45)', backdropFilter: 'blur(2px)', animation: 'fadeIn 200ms ease both' }}
+        style={{ background: 'var(--c-scrim)', backdropFilter: 'blur(2px)', animation: 'fadeIn 200ms ease both' }}
       />
 
       {/* Sheet */}
       <div
         className="fixed bottom-0 left-0 right-0 z-50 max-w-lg mx-auto rounded-t-3xl overflow-hidden"
         style={{
-          background: CREAM,
+          background: SURFACE,
           border: LINE,
           borderBottom: 'none',
           animation: 'slideUp 280ms cubic-bezier(0.32,0.72,0,1) both',
@@ -199,12 +203,12 @@ function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void 
         {(() => {
           const photos = sheetPhotos
           if (photos.length === 0) return (
-            <div className="relative h-16 flex items-end justify-end px-4 pb-3" style={{ background: PINK, borderBottom: LINE }}>
+            <div className="relative h-16 flex items-end justify-end px-4 pb-3" style={{ background: CANVAS, borderBottom: LINE }}>
               <button onClick={onClose} className="text-sm font-body" style={{ color: INK }}>✕ Fermer</button>
             </div>
           )
           return (
-            <div className="relative w-full h-52 overflow-hidden" style={{ background: PINK, borderBottom: LINE }}>
+            <div className="relative w-full h-52 overflow-hidden" style={{ background: CANVAS, borderBottom: LINE }}>
               <div
                 className="flex h-full transition-transform duration-300 ease-out"
                 style={{ width: `${photos.length * 100}%`, transform: `translateX(-${(photoIdx % photos.length) * (100 / photos.length)}%)` }}
@@ -216,16 +220,16 @@ function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void 
                     onError={() => setBadPhotos((b) => b.includes(src) ? b : [...b, src])} />
                 ))}
               </div>
-              <button onClick={onClose} className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm"
-                style={{ background: INK }}>✕</button>
+              <button onClick={onClose} className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-sm"
+                style={{ background: 'var(--c-chip-bg)', color: 'var(--c-chip-fg)' }}>✕</button>
               {photos.length > 1 && (
                 <>
                   <button onClick={() => setPhotoIdx(i => (i - 1 + photos.length) % photos.length)}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center text-white text-xs"
-                    style={{ background: INK }}>‹</button>
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center text-xs"
+                    style={{ background: 'var(--c-chip-bg)', color: 'var(--c-chip-fg)' }}>‹</button>
                   <button onClick={() => setPhotoIdx(i => (i + 1) % photos.length)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center text-white text-xs"
-                    style={{ background: INK }}>›</button>
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center text-xs"
+                    style={{ background: 'var(--c-chip-bg)', color: 'var(--c-chip-fg)' }}>›</button>
                   <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1">
                     {photos.map((_, i) => (
                       <span key={i} className="w-1.5 h-1.5 rounded-full transition-all"
@@ -299,14 +303,14 @@ function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void 
             <button
               onClick={onClose}
               className="flex-1 px-4 py-3.5 rounded-full font-display font-medium text-sm text-text whitespace-nowrap transition-all"
-              style={{ background: CREAM, border: LINE }}
+              style={{ background: SURFACE, border: LINE }}
             >
               Pas pour moi
             </button>
             <button
               onClick={() => shareSpot(spot)}
               className="py-3.5 px-4 rounded-full font-display font-medium text-sm text-text transition-all"
-              style={{ background: CREAM, border: LINE }}
+              style={{ background: SURFACE, border: LINE }}
               title="Partager"
             >
               ↗
@@ -347,10 +351,10 @@ function FavsPanel({ favs, onRemove, onClose }: { favs: Spot[]; onRemove: (id: s
 
   return (
     <>
-      <div className="fixed inset-0 z-40" onClick={onClose} style={{ background: 'rgba(26,44,42,0.5)', backdropFilter: 'blur(2px)' }} />
+      <div className="fixed inset-0 z-40" onClick={onClose} style={{ background: 'var(--c-scrim)', backdropFilter: 'blur(2px)' }} />
       <div
         className="fixed inset-0 z-50 flex flex-col max-w-lg mx-auto"
-        style={{ background: PINK, animation: 'slideUp 280ms cubic-bezier(0.32,0.72,0,1) both' }}
+        style={{ background: CANVAS, animation: 'slideUp 280ms cubic-bezier(0.32,0.72,0,1) both' }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-safe pb-3">
@@ -370,7 +374,7 @@ function FavsPanel({ favs, onRemove, onClose }: { favs: Spot[]; onRemove: (id: s
                 className="px-3 py-1.5 rounded-full text-xs font-body font-medium whitespace-nowrap transition-all shrink-0"
                 style={i === active ? {
                   background: INK,
-                  color: PINK,
+                  color: ON_INK,
                 } : {
                   background: 'transparent',
                   border: LINE,
@@ -388,7 +392,7 @@ function FavsPanel({ favs, onRemove, onClose }: { favs: Spot[]; onRemove: (id: s
           <div className="flex-1 overflow-y-auto">
             {/* Photo */}
             {spot.photo_url && !badPhotos.includes(spot.photo_url) ? (
-              <div className="relative w-full h-52 overflow-hidden mt-3" style={{ background: PINK, borderTop: LINE, borderBottom: LINE }}>
+              <div className="relative w-full h-52 overflow-hidden mt-3" style={{ background: CANVAS, borderTop: LINE, borderBottom: LINE }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={spot.photo_url} alt="" className="w-full h-full object-cover"
                   onError={() => setBadPhotos((b) => [...b, spot.photo_url as string])} />
@@ -495,14 +499,14 @@ function SpotCard({ spot, index, onTap, isFav, onFavToggle }: {
     >
       {/* Photo miniature si disponible */}
       {showPhoto && (
-        <div className="relative w-full h-32 rounded-xl overflow-hidden" style={{ background: PINK, border: LINE }}>
+        <div className="relative w-full h-32 rounded-xl overflow-hidden" style={{ background: CANVAS, border: LINE }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={spot.photo_url as string} alt="" className="w-full h-full object-cover"
             onError={() => setPhotoOk(false)} />
           <button
             onClick={onFavToggle}
             className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center text-base transition-all"
-            style={{ background: INK, color: isFav ? PINK : CREAM }}
+            style={{ background: INK, color: isFav ? ON_INK : SURFACE }}
           >
             {isFav ? '♥' : '♡'}
           </button>
@@ -530,7 +534,7 @@ function SpotCard({ spot, index, onTap, isFav, onFavToggle }: {
             <button
               onClick={onFavToggle}
               className="text-lg leading-none transition-colors"
-              style={{ color: isFav ? INK : 'rgba(26,44,42,0.3)' }}
+              style={{ color: isFav ? INK : SOFT }}
             >
               {isFav ? '♥' : '♡'}
             </button>
@@ -574,10 +578,7 @@ function SpotCard({ spot, index, onTap, isFav, onFavToggle }: {
 }
 
 function ToniteWordmark() {
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src="/logo_wordmark.png" alt="Tonite" style={{ height: 30, width: 'auto' }} />
-  )
+  return <ThemeLogo variant="wordmark" style={{ height: 30, width: 'auto' }} />
 }
 
 
@@ -679,7 +680,7 @@ function ResultsContent() {
           ← Retour
         </button>
         <div className="justify-self-center"><ToniteWordmark /></div>
-        <div />
+        <div className="justify-self-end"><ThemeToggle /></div>
       </div>
 
       {/* Titre */}
@@ -707,16 +708,16 @@ function ResultsContent() {
           }}
           className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-body font-medium transition-all"
           style={openNow ? {
-            background: YELLOW,
+            background: ACCENT,
             border: LINE,
-            color: INK,
+            color: ON_ACCENT,
           } : {
             background: 'transparent',
             border: LINE,
             color: INK,
           }}
         >
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: openNow ? INK : 'transparent', border: `1.5px solid ${INK}`, display: 'inline-block', flexShrink: 0 }} />
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: openNow ? ON_ACCENT : 'transparent', border: `1.5px solid ${openNow ? ON_ACCENT : INK}`, display: 'inline-block', flexShrink: 0 }} />
           {openAtHour != null ? `Ouvert vers ${openAtHour}h` : 'Ouvert maintenant'}
         </button>
 
@@ -729,7 +730,7 @@ function ResultsContent() {
               className="px-3.5 py-1.5 rounded-full text-xs font-body font-medium transition-all"
               style={view === v ? {
                 background: INK,
-                color: PINK,
+                color: ON_INK,
               } : {
                 background: 'transparent',
                 color: INK,
@@ -749,7 +750,7 @@ function ResultsContent() {
         <div className="flex flex-col gap-3">
           {[1,2,3].map((i) => (
             <div key={i} className="h-44 rounded-2xl animate-pulse"
-              style={{ background: CREAM, border: LINE, opacity: 0.6 }} />
+              style={{ background: SURFACE, border: LINE, opacity: 0.6 }} />
           ))}
         </div>
       )}
@@ -800,7 +801,7 @@ function ResultsContent() {
           <button
             onClick={() => fetchSpots(excludeIds, openNow)}
             className="w-full py-3.5 rounded-full font-display font-medium text-sm text-text transition-all"
-            style={{ background: CREAM, border: LINE }}
+            style={{ background: SURFACE, border: LINE }}
           >
             Autre sélection ↻
           </button>
@@ -819,12 +820,12 @@ function ResultsContent() {
         <div className="rounded-2xl overflow-hidden relative"
           style={{ height: 'calc(100vh - 230px)', minHeight: 360, border: LINE }}>
           {mapLoading && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center" style={{ background: CREAM }}>
+            <div className="absolute inset-0 z-10 flex items-center justify-center" style={{ background: SURFACE }}>
               <p className="text-muted text-sm font-body">Chargement des spots…</p>
             </div>
           )}
           {!mapLoading && mapSpots && mapSpots.length === 0 && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center text-center px-8" style={{ background: CREAM }}>
+            <div className="absolute inset-0 z-10 flex items-center justify-center text-center px-8" style={{ background: SURFACE }}>
               <p className="text-muted text-sm font-body">Aucun spot géolocalisé dans cette catégorie pour l&apos;instant.</p>
             </div>
           )}
@@ -848,7 +849,7 @@ function ResultsContent() {
           className="fixed bottom-safe left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-3 rounded-full font-display font-semibold text-sm z-30 transition-all"
           style={{
             background: INK,
-            color: PINK,
+            color: ON_INK,
           }}
         >
           ♥ Mes spots ({favs.length})

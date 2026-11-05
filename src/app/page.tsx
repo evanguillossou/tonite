@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { arrondissementsByDistance } from '@/lib/geo'
+import ThemeToggle from '@/components/ThemeToggle'
+import ThemeLogo from '@/components/ThemeLogo'
 
 // Créneaux horaires proposés (en plus de « Maintenant »).
 const HEURES = [20, 21, 22, 23, 0, 1, 2]
@@ -17,10 +19,13 @@ function resolveHeure(hour: number): { day: number; time: number } {
   return { day: target.getDay(), time: hour * 100 }
 }
 
-const INK = 'var(--tn-ink)'
-const PINK = 'var(--tn-pink)'
-const CREAM = 'var(--tn-cream)'
-const YELLOW = 'var(--tn-yellow)'
+// Couleurs par rôle : suivent le thème clair / sombre (voir globals.css)
+const INK = 'var(--c-ink)'
+const CANVAS = 'var(--c-canvas)'
+const SURFACE = 'var(--c-surface)'
+const ACCENT = 'var(--c-accent)'
+const ON_ACCENT = 'var(--c-on-accent)'
+const ON_INK = 'var(--c-on-ink)'
 
 // Bandeau bêta : fermable, et ne revient plus une fois fermé (mémorisé dans le navigateur).
 // Pour réafficher un nouveau message à tout le monde plus tard : changer la clé (v1 → v2).
@@ -53,11 +58,11 @@ function BetaBanner() {
         <div
           role="status"
           className="toast-in max-w-lg mx-auto flex items-center gap-3 rounded-2xl pl-4 pr-1.5 py-2 pointer-events-auto"
-          style={{ background: CREAM, border: `1.5px solid ${INK}` }}
+          style={{ background: SURFACE, border: `1.5px solid ${INK}` }}
         >
           <span
             className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-body font-semibold tracking-[0.14em] uppercase"
-            style={{ background: YELLOW, color: INK, border: `1.5px solid ${INK}` }}
+            style={{ background: ACCENT, color: ON_ACCENT, border: `1.5px solid ${INK}` }}
           >
             Bêta
           </span>
@@ -93,13 +98,6 @@ export default function HomePage() {
   const [budgets, setBudgets] = useState<number[]>([])
 
   const [loading, setLoading] = useState(false)
-
-  // Fond body rose sur l'accueil (restauré en quittant la page)
-  useEffect(() => {
-    const prev = document.body.style.background
-    document.body.style.background = 'var(--tn-pink)'
-    return () => { document.body.style.background = prev }
-  }, [])
 
   const ready = !!arrondissement
 
@@ -176,13 +174,17 @@ export default function HomePage() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden" style={{ background: PINK }}>
+    <main className="relative min-h-screen overflow-x-hidden" style={{ background: CANVAS }}>
       <div className="relative z-10 flex flex-col min-h-screen px-5 pt-safe pb-safe max-w-lg mx-auto">
+
+        {/* Mode clair / sombre */}
+        <div className="absolute right-4 top-safe z-20">
+          <ThemeToggle />
+        </div>
 
         {/* Hero */}
         <header className="fade-in mb-8 text-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo_rose.png" alt="Tonite" className="mx-auto" style={{ width: 'min(58vw, 210px)', height: 'auto' }} />
+          <ThemeLogo variant="full" className="mx-auto" style={{ width: 'min(58vw, 210px)', height: 'auto' }} />
           <h1 className="font-display font-bold" style={{ color: INK, fontSize: 'clamp(1.35rem, 5.2vw, 1.7rem)', lineHeight: 1.15, marginTop: '-0.4rem' }}>
             Les meilleurs spots autour de vous
           </h1>
@@ -220,7 +222,7 @@ export default function HomePage() {
                 className="flex items-center gap-3 w-full px-4 py-3 text-left rounded-xl transition-all"
                 style={{
                   border: geoStatus === 'ok' ? `2px solid ${INK}` : `1.5px solid ${INK}`,
-                  background: CREAM,
+                  background: SURFACE,
                 }}
               >
                 <span className="text-sm shrink-0" style={{ color: INK }}>
@@ -233,15 +235,15 @@ export default function HomePage() {
                     {geoStatus === 'idle' && 'Me géolocaliser'}
                     {(geoStatus === 'denied' || geoStatus === 'unavailable' || geoStatus === 'https_required') && 'Géolocalisation indisponible'}
                   </p>
-                  {geoError && <p className="text-[11px] mt-0.5" style={{ color: '#A8325F' }}>{geoError}</p>}
+                  {geoError && <p className="text-[11px] mt-0.5" style={{ color: 'var(--c-error)' }}>{geoError}</p>}
                   {!geoError && geoStatus === 'ok' && <p className="text-[11px] mt-0.5" style={{ color: INK, opacity: 0.6 }}>Appuie pour modifier</p>}
                 </div>
               </button>
 
               <div className="flex items-center gap-3">
-                <div className="flex-1 h-px" style={{ background: 'rgba(26,44,42,0.22)' }} />
+                <div className="flex-1 h-px" style={{ background: 'var(--c-faint)' }} />
                 <span className="text-xs font-body" style={{ color: INK, opacity: 0.55 }}>ou</span>
-                <div className="flex-1 h-px" style={{ background: 'rgba(26,44,42,0.22)' }} />
+                <div className="flex-1 h-px" style={{ background: 'var(--c-faint)' }} />
               </div>
 
               <div className="relative">
@@ -255,7 +257,7 @@ export default function HomePage() {
                   }}
                   className="w-full font-body cursor-pointer rounded-xl"
                   style={{
-                    background: CREAM,
+                    background: SURFACE,
                     color: INK,
                     border: arrondissement ? `2px solid ${INK}` : `1.5px solid ${INK}`,
                     padding: '12px 40px 12px 14px',
@@ -287,8 +289,8 @@ export default function HomePage() {
                     className="py-3 rounded-xl text-center transition-all font-display font-semibold"
                     style={{
                       border: `1.5px solid ${INK}`,
-                      background: sel ? YELLOW : CREAM,
-                      color: INK,
+                      background: sel ? ACCENT : SURFACE,
+                      color: sel ? ON_ACCENT : INK,
                     }}
                   >
                     {'€'.repeat(b)}
@@ -308,11 +310,11 @@ export default function HomePage() {
             className="w-full py-4 rounded-full text-base font-display font-semibold tracking-wide transition-all"
             style={ready && !loading ? {
               background: INK,
-              color: PINK,
+              color: ON_INK,
             } : {
-              background: CREAM,
-              color: 'rgba(26,44,42,0.4)',
-              border: '1.5px solid rgba(26,44,42,0.2)',
+              background: SURFACE,
+              color: 'var(--c-soft)',
+              border: '1.5px solid var(--c-faint)',
               cursor: 'not-allowed',
             }}
           >
@@ -341,7 +343,7 @@ function Chip({ children, selected, onClick }: { children: React.ReactNode; sele
       style={{
         border: `1.5px solid ${INK}`,
         background: selected ? INK : 'transparent',
-        color: selected ? PINK : INK,
+        color: selected ? ON_INK : INK,
       }}
     >
       {children}

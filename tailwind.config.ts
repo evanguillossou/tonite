@@ -13,12 +13,13 @@ const config: Config = {
         body: ['var(--font-body)', 'sans-serif'],
       },
       colors: {
-        bg:      '#F4BCD8', // rose : canvas (comme l'accueil)
-        card:    '#FBF4EC', // crème : cartes / champs
-        border:  '#1A2C2A', // contours vert encre
-        subtle:  'rgba(26,44,42,0.35)',
-        muted:   'rgba(26,44,42,0.7)', // vert encre atténué (pas de gris)
-        text:    '#1A2C2A', // vert encre
+        // Suivent le thème clair / sombre (variables définies dans globals.css)
+        bg:      'var(--bg)',     // fond de page
+        card:    'var(--card)',   // cartes / champs
+        border:  'var(--border)', // contours
+        subtle:  'var(--subtle)',
+        muted:   'var(--muted)',  // texte secondaire
+        text:    'var(--text)',   // encre
         accent:  '#F4BCD8', // rose
         accent2: '#F9D56E', // jaune
       },

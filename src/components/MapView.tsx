@@ -44,7 +44,19 @@ type MapboxMap = {
   on: (ev: string, cb: () => void) => void
   remove: () => void
   fitBounds: (b: unknown, opts?: unknown) => void
+  setStyle: (style: string) => void
 }
+
+// Fond de carte selon le thème clair / sombre
+const STYLE_LIGHT = 'mapbox://styles/mapbox/light-v11'
+const STYLE_DARK = 'mapbox://styles/mapbox/dark-v11'
+function currentMapStyle() {
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? STYLE_DARK : STYLE_LIGHT
+}
+
+// Pins : couleurs par rôle (globals.css) → suivent le thème automatiquement
+const PIN_SHADOW = '0 0 0 1px var(--c-faint), 0 2px 6px var(--c-soft)'
+const PIN_SHADOW_SELECTED = '0 0 0 3px var(--c-ink), 0 2px 10px var(--c-soft)'
 
 export default function MapView({
   spots,
@@ -89,7 +101,7 @@ export default function MapView({
 
       const map = new mapboxgl.Map({
         container: containerRef.current,
-        style: 'mapbox://styles/mapbox/light-v11',
+        style: currentMapStyle(),
         center: PARIS,
         zoom: 11.5,
         attributionControl: false,
@@ -117,8 +129,8 @@ export default function MapView({
           el.className = 'tonite-pin'
           el.style.cssText = [
             'width:16px', 'height:16px', 'border-radius:50%',
-            'background:#1A2C2A', 'border:2px solid #FBF4EC',
-            'box-shadow:0 0 0 1px rgba(26,44,42,0.25), 0 2px 6px rgba(26,44,42,0.35)',
+            'background:var(--c-ink)', 'border:2px solid var(--c-surface)',
+            `box-shadow:${PIN_SHADOW}`,
             'cursor:pointer',
             'transition:transform 150ms ease, width 150ms ease, height 150ms ease',
           ].join(';')
@@ -155,20 +167,28 @@ export default function MapView({
     }
   }, [spots, token])
 
+  // Changement de thème pendant que la carte est ouverte → on bascule le fond de carte
+  // (les pins sont des éléments HTML : ils restent en place et suivent déjà les couleurs du thème).
+  useEffect(() => {
+    const observer = new MutationObserver(() => mapRef.current?.setStyle(currentMapStyle()))
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => observer.disconnect()
+  }, [])
+
   // Met en évidence le pin sélectionné
   useEffect(() => {
     markersRef.current.forEach(({ id, el }) => {
       if (id === selectedId) {
-        el.style.background = '#F9D56E'
+        el.style.background = 'var(--c-accent)'
         el.style.width = '22px'
         el.style.height = '22px'
-        el.style.boxShadow = '0 0 0 3px rgba(26,44,42,0.9), 0 2px 10px rgba(26,44,42,0.4)'
+        el.style.boxShadow = PIN_SHADOW_SELECTED
         el.style.zIndex = '10'
       } else {
-        el.style.background = '#1A2C2A'
+        el.style.background = 'var(--c-ink)'
         el.style.width = '16px'
         el.style.height = '16px'
-        el.style.boxShadow = '0 0 0 1px rgba(26,44,42,0.25), 0 2px 6px rgba(26,44,42,0.35)'
+        el.style.boxShadow = PIN_SHADOW
         el.style.zIndex = ''
       }
     })

@@ -2,26 +2,67 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Variables ── */
+/* ── Thème : couleurs par RÔLE ──────────────────────────────────────────
+   Clair (par défaut) = la DA validée, valeurs inchangées.
+   Sombre = mêmes couleurs de marque, rôles inversés comme le logo sombre :
+   fond noir, encre rose, cartes vert foncé, accent jaune.
+   Les composants n'utilisent QUE ces rôles (--c-*), jamais une couleur en dur. */
 :root {
-  --bg: #F4BCD8;        /* rose : canvas (comme l'accueil) */
-  --card: #FBF4EC;      /* crème : cartes / champs */
-  --border: #1A2C2A;    /* contours vert encre */
-  --text: #1A2C2A;      /* vert encre */
-  --muted: rgba(26,44,42,0.7);
-  --subtle: rgba(26,44,42,0.35);
+  --c-canvas:    #F4BCD8;            /* fond de page */
+  --c-ink:       #1A2C2A;            /* textes, contours, boutons pleins */
+  --c-surface:   #FBF4EC;            /* cartes, champs */
+  --c-accent:    #F9D56E;            /* état actif, « ouvert », bêta */
+  --c-on-accent: #1A2C2A;            /* texte posé sur l'accent */
+  --c-on-ink:    #F4BCD8;            /* texte posé sur un bouton plein */
+  --c-muted:     rgba(26,44,42,0.7); /* texte secondaire */
+  --c-soft:      rgba(26,44,42,0.35);/* séparateurs, désactivé */
+  --c-faint:     rgba(26,44,42,0.22);/* filets très discrets */
+  --c-scrim:     rgba(26,44,42,0.45);/* voile derrière les volets */
+  --c-error:     #A8325F;
+  --c-chip-bg:   #1A2C2A;            /* pastilles posées sur les photos */
+  --c-chip-fg:   #FFFFFF;
+  color-scheme: light;
+
+  /* Anciens noms (classes Tailwind, utilitaires, back-office) → rôles */
+  --bg: var(--c-canvas);
+  --card: var(--c-surface);
+  --border: var(--c-ink);
+  --text: var(--c-ink);
+  --muted: var(--c-muted);
+  --subtle: var(--c-soft);
   --pink: #F4BCD8;
   --pink-deep: #D99BBE;
-  --grad-from: #1A2C2A;
-  --grad-to: #1A2C2A;
+  --grad-from: var(--c-ink);
+  --grad-to: var(--c-ink);
 
-  /* ── Nouvelle DA « riso pop » (migration en cours, écran par écran) ── */
-  --tn-pink:   #F4BCD8; /* surface signature / hero */
-  --tn-ink:    #1A2C2A; /* encre : textes, filets, boutons pleins */
-  --tn-yellow: #F9D56E; /* accent : état actif, tags */
-  --tn-cream:  #FBF4EC; /* surfaces de contenu (cartes, champs) */
-  --tn-rose-2: #F9DCEA; /* rose clair secondaire */
+  /* Couleurs de marque FIXES (ne changent pas avec le thème) */
+  --tn-pink:   #F4BCD8;
+  --tn-ink:    #1A2C2A;
+  --tn-yellow: #F9D56E;
+  --tn-cream:  #FBF4EC;
+  --tn-rose-2: #F9DCEA;
 }
+
+[data-theme="dark"] {
+  --c-canvas:    #000000;                /* fond du logo sombre */
+  --c-ink:       #F4BCD8;
+  --c-surface:   #1A2C2A;
+  --c-accent:    #F9D56E;
+  --c-on-accent: #1A2C2A;
+  --c-on-ink:    #000000;
+  --c-muted:     rgba(244,188,216,0.72);
+  --c-soft:      rgba(244,188,216,0.35);
+  --c-faint:     rgba(244,188,216,0.22);
+  --c-scrim:     rgba(0,0,0,0.6);
+  --c-error:     #FFB3C7;
+  --c-chip-bg:   #F4BCD8;
+  --c-chip-fg:   #000000;
+  color-scheme: dark;
+}
+
+/* Logo : la bonne version selon le thème */
+[data-theme="dark"] .only-light { display: none !important; }
+:root:not([data-theme="dark"]) .only-dark { display: none !important; }
 
 /* ── Base ── */
 *, *::before, *::after { box-sizing: border-box; }
@@ -51,21 +92,21 @@ html, body {
 }
 
 .grad-border {
-  border: 1px solid var(--tn-ink);
+  border: 1px solid var(--c-ink);
   background-clip: padding-box;
 }
 
 /* ── Carte (ex-glass, désormais à plat) ── */
 .glass {
-  background: var(--tn-cream);
-  border: 1.5px solid var(--tn-ink);
+  background: var(--c-surface);
+  border: 1.5px solid var(--c-ink);
   border-radius: 16px;
 }
 
 /* ── CTA button ── */
 .btn-cta {
-  background: var(--tn-ink);
-  color: var(--tn-pink);
+  background: var(--c-ink);
+  color: var(--c-on-ink);
   font-weight: 600;
   border-radius: 100px;
   transition: filter 150ms ease, transform 150ms ease;
@@ -73,7 +114,7 @@ html, body {
 .btn-cta:hover  { filter: brightness(1.08); }
 .btn-cta:active { transform: scale(0.97); }
 .btn-cta:disabled {
-  background: var(--tn-cream);
+  background: var(--c-surface);
   color: var(--muted);
   border: 1.5px solid var(--subtle);
   cursor: not-allowed;
@@ -88,11 +129,11 @@ html, body {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.pill:hover { border-color: var(--tn-ink); transform: translateY(-2px); }
+.pill:hover { border-color: var(--c-ink); transform: translateY(-2px); }
 .pill.selected {
-  background: var(--tn-yellow);
-  border-color: var(--tn-ink);
-  color: var(--tn-ink);
+  background: var(--c-accent);
+  border-color: var(--c-ink);
+  color: var(--c-on-accent);
 }
 
 /* ── Pill card (énergie) ── */
@@ -104,10 +145,10 @@ html, body {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.pill-card:hover { border-color: var(--tn-ink); transform: translateY(-2px); }
+.pill-card:hover { border-color: var(--c-ink); transform: translateY(-2px); }
 .pill-card.selected {
   background: var(--tn-rose-2);
-  border-color: var(--tn-ink);
+  border-color: var(--c-ink);
 }
 
 /* ── Input ── */
@@ -126,7 +167,7 @@ html, body {
   -webkit-appearance: none;
 }
 .input-style::placeholder { color: var(--muted); }
-.input-style:focus { border-color: var(--tn-ink); }
+.input-style:focus { border-color: var(--c-ink); }
 
 /* ── Animations ── */
 @keyframes fadeUp {
