@@ -5,13 +5,7 @@ import { useRouter } from 'next/navigation'
 
 function ToniteWordmark() {
   return (
-    <div className="flex items-center gap-1">
-      <span className="font-display font-bold text-xl tracking-tight"
-        style={{ background: 'linear-gradient(90deg,#FF6B35,#E91E8C)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', letterSpacing: '-0.03em' }}>
-        tonite
-      </span>
-      <span style={{ color: '#FF6B35', fontSize: '7px', marginTop: '-6px' }}>★</span>
-    </div>
+    <span className="font-display font-bold text-xl tracking-wide" style={{ color: '#1A2C2A' }}>TONITE</span>
   )
 }
 
@@ -46,7 +40,7 @@ export default function SuggererPage() {
     return (
       <main className="min-h-screen bg-bg flex flex-col items-center justify-center px-5 text-center max-w-lg mx-auto fade-in">
         <div className="w-16 h-16 rounded-full flex items-center justify-center text-2xl mb-6 font-display"
-          style={{ background: 'linear-gradient(135deg,rgba(255,107,53,0.15),rgba(233,30,140,0.15))', border: '1px solid rgba(255,107,53,0.3)' }}>
+          style={{ background: '#F9DCEA', border: '1px solid #1A2C2A', color: '#1A2C2A' }}>
           ✓
         </div>
         <h2 className="font-display font-bold text-2xl text-text mb-3">Merci !</h2>
@@ -112,7 +106,7 @@ export default function SuggererPage() {
           />
         </div>
 
-        {error && <p className="text-red-400 text-xs font-body">{error}</p>}
+        {error && <p className="text-xs font-body" style={{ color: '#B0324F' }}>{error}</p>}
 
         <button
           type="submit"
