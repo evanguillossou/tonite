@@ -64,6 +64,8 @@ export default function SpotPage() {
   const [spot, setSpot] = useState<Spot | null>(null)
   const [loading, setLoading] = useState(true)
   const [shared, setShared] = useState(false)
+  // Photo qui ne charge pas (lien expiré) → pas de bandeau photo vide
+  const [photoOk, setPhotoOk] = useState(true)
 
   useEffect(() => {
     supabase.from('spots').select('*').eq('id', id).single().then(({ data }) => {
@@ -111,11 +113,11 @@ export default function SpotPage() {
     <main className="min-h-screen bg-bg flex flex-col max-w-lg mx-auto">
 
       {/* Photo hero */}
-      {spot.photo_url ? (
+      {spot.photo_url && photoOk ? (
         <div className="relative w-full h-64 overflow-hidden" style={{ background: '#F4BCD8', borderBottom: '1.5px solid #1A2C2A' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={spot.photo_url} alt="" className="w-full h-full object-cover"
-            onError={(e) => { e.currentTarget.style.display = 'none' }} />
+            onError={() => setPhotoOk(false)} />
           <button
             onClick={handleBack}
             className="absolute top-4 left-4 flex items-center gap-1.5 text-sm font-body px-3 py-1.5 rounded-full"

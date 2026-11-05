@@ -170,6 +170,10 @@ function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void 
     : null
   const status = openStatus(spot.horaires as Period[] | null)
   const [photoIdx, setPhotoIdx] = useState(0)
+  // Photos qui ne chargent pas (liens expirés) : retirées du carrousel
+  const [badPhotos, setBadPhotos] = useState<string[]>([])
+  const sheetPhotos = (spot.photos && spot.photos.length > 0 ? spot.photos : spot.photo_url ? [spot.photo_url] : [])
+    .filter((p) => !badPhotos.includes(p))
 
   return (
     <>
@@ -193,7 +197,7 @@ function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void 
       >
         {/* Photo / Carousel */}
         {(() => {
-          const photos = spot.photos && spot.photos.length > 0 ? spot.photos : spot.photo_url ? [spot.photo_url] : []
+          const photos = sheetPhotos
           if (photos.length === 0) return (
             <div className="relative h-16 flex items-end justify-end px-4 pb-3" style={{ background: PINK, borderBottom: LINE }}>
               <button onClick={onClose} className="text-sm font-body" style={{ color: INK }}>✕ Fermer</button>
@@ -209,7 +213,7 @@ function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void 
                   // eslint-disable-next-line @next/next/no-img-element
                   <img key={i} src={src} alt="" className="h-full object-cover flex-shrink-0"
                     style={{ width: `${100 / photos.length}%` }}
-                    onError={(e) => { e.currentTarget.style.visibility = 'hidden' }} />
+                    onError={() => setBadPhotos((b) => b.includes(src) ? b : [...b, src])} />
                 ))}
               </div>
               <button onClick={onClose} className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm"
@@ -294,7 +298,7 @@ function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void 
           <div className="flex gap-3 mt-1">
             <button
               onClick={onClose}
-              className="flex-1 py-3.5 rounded-full font-display font-medium text-sm text-text transition-all"
+              className="flex-1 px-4 py-3.5 rounded-full font-display font-medium text-sm text-text whitespace-nowrap transition-all"
               style={{ background: CREAM, border: LINE }}
             >
               Pas pour moi
@@ -332,6 +336,7 @@ function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void 
 // ── Panneau Favoris ───────────────────────────────────────────
 function FavsPanel({ favs, onRemove, onClose }: { favs: Spot[]; onRemove: (id: string) => void; onClose: () => void }) {
   const [active, setActive] = useState(0)
+  const [badPhotos, setBadPhotos] = useState<string[]>([])
   const spot = favs[active]
   const status = spot ? openStatus(spot.horaires as Period[] | null) : null
 
@@ -382,11 +387,11 @@ function FavsPanel({ favs, onRemove, onClose }: { favs: Spot[]; onRemove: (id: s
         {spot && (
           <div className="flex-1 overflow-y-auto">
             {/* Photo */}
-            {spot.photo_url ? (
+            {spot.photo_url && !badPhotos.includes(spot.photo_url) ? (
               <div className="relative w-full h-52 overflow-hidden mt-3" style={{ background: PINK, borderTop: LINE, borderBottom: LINE }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={spot.photo_url} alt="" className="w-full h-full object-cover"
-                  onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                  onError={() => setBadPhotos((b) => [...b, spot.photo_url as string])} />
               </div>
             ) : (
               <div className="h-4" />
@@ -476,6 +481,9 @@ function SpotCard({ spot, index, onTap, isFav, onFavToggle }: {
     : null
   const vibeText = spot.vibe_enrichie && spot.vibe ? spot.vibe : null
   const status = openStatus(spot.horaires as Period[] | null)
+  // Photo qui ne charge pas (lien expiré) → on retire le cadre, carte compacte
+  const [photoOk, setPhotoOk] = useState(true)
+  const showPhoto = !!spot.photo_url && photoOk
 
   return (
     <article
@@ -486,11 +494,11 @@ function SpotCard({ spot, index, onTap, isFav, onFavToggle }: {
       onMouseLeave={(e) => { e.currentTarget.style.transform = '' }}
     >
       {/* Photo miniature si disponible */}
-      {spot.photo_url && (
+      {showPhoto && (
         <div className="relative w-full h-32 rounded-xl overflow-hidden" style={{ background: PINK, border: LINE }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={spot.photo_url} alt="" className="w-full h-full object-cover"
-            onError={(e) => { e.currentTarget.style.display = 'none' }} />
+          <img src={spot.photo_url as string} alt="" className="w-full h-full object-cover"
+            onError={() => setPhotoOk(false)} />
           <button
             onClick={onFavToggle}
             className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center text-base transition-all"
@@ -518,7 +526,7 @@ function SpotCard({ spot, index, onTap, isFav, onFavToggle }: {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {!spot.photo_url && (
+          {!showPhoto && (
             <button
               onClick={onFavToggle}
               className="text-lg leading-none transition-colors"

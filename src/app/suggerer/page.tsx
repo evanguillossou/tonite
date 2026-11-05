@@ -69,7 +69,7 @@ export default function SuggererPage() {
       <header className="mb-8 fade-up">
         <p className="text-[11px] tracking-[0.2em] text-muted uppercase mb-3 font-body">Communauté</p>
         <h1 className="font-display font-bold text-3xl text-text">Suggérer un spot</h1>
-        <p className="text-muted text-sm font-body mt-2">Tu connais un endroit qui mérite d&apos;être sur Tonite ?</p>
+        <p className="text-muted text-sm font-body mt-2">Tu connais un endroit qui mérite d&apos;être sur Tonite&nbsp;?</p>
       </header>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5 flex-1 fade-up delay-1">
