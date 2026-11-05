@@ -56,14 +56,15 @@ export default function SuggererPage() {
   }
 
   return (
-    <main className="min-h-screen bg-bg flex flex-col px-5 pt-10 pb-safe max-w-lg mx-auto">
-      <div className="flex items-center justify-between mb-10 fade-in">
+    <main className="min-h-screen bg-bg flex flex-col px-5 pt-safe pb-safe max-w-lg mx-auto">
+      <div className="grid grid-cols-3 items-center mb-10 fade-in">
         <button onClick={() => router.back()}
-          className="text-muted text-sm font-body hover:text-text transition-colors">
+          className="justify-self-start flex items-center gap-1.5 h-10 px-4 rounded-full text-sm font-body font-medium"
+          style={{ border: '1.5px solid #1A2C2A', color: '#1A2C2A' }}>
           ← Retour
         </button>
-        <ToniteWordmark />
-        <div className="w-16" />
+        <div className="justify-self-center"><ToniteWordmark /></div>
+        <div />
       </div>
 
       <header className="mb-8 fade-up">

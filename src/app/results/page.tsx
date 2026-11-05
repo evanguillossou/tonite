@@ -353,9 +353,9 @@ function FavsPanel({ favs, onRemove, onClose }: { favs: Spot[]; onRemove: (id: s
         style={{ background: PINK, animation: 'slideUp 280ms cubic-bezier(0.32,0.72,0,1) both' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-10 pb-3">
+        <div className="flex items-center justify-between px-5 pt-safe pb-3">
           <h2 className="font-display font-bold text-lg text-text">Mes spots</h2>
-          <button onClick={onClose} className="text-muted text-sm font-body px-3 py-1.5 rounded-full" style={{ border: LINE }}>
+          <button onClick={onClose} className="h-10 px-4 text-sm font-body font-medium rounded-full" style={{ border: LINE, color: INK }}>
             Fermer
           </button>
         </div>
@@ -669,16 +669,17 @@ function ResultsContent() {
   }
 
   return (
-    <main className="min-h-screen bg-bg flex flex-col px-5 pt-8 pb-safe max-w-lg mx-auto">
+    <main className="min-h-screen bg-bg flex flex-col px-5 pt-safe pb-safe max-w-lg mx-auto">
 
-      {/* Nav */}
-      <div className="flex items-center justify-between mb-8 fade-in">
+      {/* Nav : vrai bouton (40 px) sous la zone de sécurité */}
+      <div className="grid grid-cols-3 items-center mb-8 fade-in">
         <button onClick={() => router.push('/')}
-          className="flex items-center gap-2 text-muted text-sm font-body hover:text-text transition-colors">
+          className="justify-self-start flex items-center gap-1.5 h-10 px-4 rounded-full text-sm font-body font-medium"
+          style={{ border: LINE, color: INK }}>
           ← Retour
         </button>
-        <ToniteWordmark />
-        <div className="w-16" />
+        <div className="justify-self-center"><ToniteWordmark /></div>
+        <div />
       </div>
 
       {/* Titre */}
@@ -844,7 +845,7 @@ function ResultsContent() {
       {favs.length > 0 && !activeSpot && !showFavs && (
         <button
           onClick={() => setShowFavs(true)}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-3 rounded-full font-display font-semibold text-sm z-30 transition-all"
+          className="fixed bottom-safe left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-3 rounded-full font-display font-semibold text-sm z-30 transition-all"
           style={{
             background: INK,
             color: PINK,

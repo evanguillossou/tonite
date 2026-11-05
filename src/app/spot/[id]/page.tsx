@@ -120,15 +120,18 @@ export default function SpotPage() {
             onError={() => setPhotoOk(false)} />
           <button
             onClick={handleBack}
-            className="absolute top-4 left-4 flex items-center gap-1.5 text-sm font-body px-3 py-1.5 rounded-full"
+            className="absolute top-safe left-4 flex items-center gap-1.5 h-10 px-4 text-sm font-body font-medium rounded-full"
             style={{ background: '#1A2C2A', color: '#F4BCD8' }}
           >
             ← Retour
           </button>
         </div>
       ) : (
-        <div className="px-5 pt-10 pb-2">
-          <button onClick={handleBack} className="text-muted text-sm font-body">← Retour</button>
+        <div className="px-5 pt-safe pb-2">
+          <button onClick={handleBack} className="flex items-center gap-1.5 h-10 px-4 rounded-full text-sm font-body font-medium"
+            style={{ border: '1.5px solid #1A2C2A', color: '#1A2C2A' }}>
+            ← Retour
+          </button>
         </div>
       )}
 

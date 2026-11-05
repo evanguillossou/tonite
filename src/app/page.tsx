@@ -30,11 +30,12 @@ function BetaBanner() {
   const [show, setShow] = useState(false)
 
   useEffect(() => {
-    try {
-      if (localStorage.getItem(BANNER_KEY) !== '1') setShow(true)
-    } catch {
-      setShow(true) // stockage indisponible (navigation privée…) : on l'affiche quand même
-    }
+    let closed = false
+    try { closed = localStorage.getItem(BANNER_KEY) === '1' } catch { /* stockage indisponible : on l'affiche */ }
+    if (closed) return
+    // Arrive après la page, comme une petite note : ne décale jamais le contenu.
+    const t = setTimeout(() => setShow(true), 900)
+    return () => clearTimeout(t)
   }, [])
 
   function close() {
@@ -45,29 +46,35 @@ function BetaBanner() {
   if (!show) return null
 
   return (
-    <div
-      role="status"
-      className="fade-in mb-6 flex items-start gap-3 rounded-2xl pl-4 pr-2 py-3"
-      style={{ background: CREAM, border: `1.5px solid ${INK}` }}
-    >
-      <span
-        className="shrink-0 mt-px px-2 py-0.5 rounded-full text-[10px] font-body font-semibold tracking-[0.14em] uppercase"
-        style={{ background: YELLOW, color: INK, border: `1.5px solid ${INK}` }}
-      >
-        Bêta
-      </span>
-      <p className="flex-1 text-xs font-body leading-relaxed" style={{ color: INK }}>
-        De nouvelles adresses arrivent chaque semaine. Le meilleur est à venir&nbsp;!
-      </p>
-      <button
-        onClick={close}
-        aria-label="Fermer le message"
-        className="shrink-0 -mt-1 w-8 h-8 rounded-full flex items-center justify-center text-xl leading-none"
-        style={{ color: INK }}
-      >
-        ×
-      </button>
-    </div>
+    <>
+      {/* Réserve de place en bas de page : la carte ne masque jamais « Voir les spots » */}
+      <div aria-hidden className="h-24" />
+      <div className="fixed inset-x-0 bottom-safe z-40 px-4 pointer-events-none">
+        <div
+          role="status"
+          className="toast-in max-w-lg mx-auto flex items-center gap-3 rounded-2xl pl-4 pr-1.5 py-2 pointer-events-auto"
+          style={{ background: CREAM, border: `1.5px solid ${INK}` }}
+        >
+          <span
+            className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-body font-semibold tracking-[0.14em] uppercase"
+            style={{ background: YELLOW, color: INK, border: `1.5px solid ${INK}` }}
+          >
+            Bêta
+          </span>
+          <p className="flex-1 text-xs font-body leading-snug" style={{ color: INK }}>
+            De nouvelles adresses arrivent chaque semaine. Le meilleur est à venir&nbsp;!
+          </p>
+          <button
+            onClick={close}
+            aria-label="Fermer le message"
+            className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-xl leading-none"
+            style={{ color: INK }}
+          >
+            ×
+          </button>
+        </div>
+      </div>
+    </>
   )
 }
 
@@ -170,9 +177,7 @@ export default function HomePage() {
 
   return (
     <main className="relative min-h-screen overflow-x-hidden" style={{ background: PINK }}>
-      <div className="relative z-10 flex flex-col min-h-screen px-5 pt-10 pb-safe max-w-lg mx-auto">
-
-        <BetaBanner />
+      <div className="relative z-10 flex flex-col min-h-screen px-5 pt-safe pb-safe max-w-lg mx-auto">
 
         {/* Hero */}
         <header className="fade-in mb-8 text-center">
@@ -320,6 +325,8 @@ export default function HomePage() {
             </a>
           </p>
         </div>
+
+        <BetaBanner />
 
       </div>
     </main>
