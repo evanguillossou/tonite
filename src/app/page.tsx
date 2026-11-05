@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { arrondissementsByDistance } from '@/lib/geo'
 
@@ -17,6 +17,11 @@ function resolveHeure(hour: number): { day: number; time: number } {
   return { day: target.getDay(), time: hour * 100 }
 }
 
+const INK = 'var(--tn-ink)'
+const PINK = 'var(--tn-pink)'
+const CREAM = 'var(--tn-cream)'
+const YELLOW = 'var(--tn-yellow)'
+
 export default function HomePage() {
   const router = useRouter()
 
@@ -32,6 +37,13 @@ export default function HomePage() {
   const [budgets, setBudgets] = useState<number[]>([])
 
   const [loading, setLoading] = useState(false)
+
+  // Fond body rose sur l'accueil (restauré en quittant la page)
+  useEffect(() => {
+    const prev = document.body.style.background
+    document.body.style.background = 'var(--tn-pink)'
+    return () => { document.body.style.background = prev }
+  }, [])
 
   const ready = !!arrondissement
 
@@ -108,38 +120,22 @@ export default function HomePage() {
   }
 
   return (
-    <main className="relative min-h-screen bg-bg overflow-x-hidden">
-
-      {/* Hero */}
-      <div className="absolute inset-0 z-0">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=900&q=70&auto=format&fit=crop"
-          alt=""
-          className="w-full h-full object-cover object-center"
-          style={{ opacity: 0.25, filter: 'brightness(0.5) saturate(0.8)' }}
-        />
-        <div className="absolute inset-0" style={{
-          background: 'linear-gradient(to bottom, rgba(10,10,10,0.4) 0%, rgba(10,10,10,0.75) 50%, #0A0A0A 85%)',
-        }} />
-      </div>
-
+    <main className="relative min-h-screen overflow-x-hidden" style={{ background: PINK }}>
       <div className="relative z-10 flex flex-col min-h-screen px-5 pt-10 pb-safe max-w-lg mx-auto">
 
-        {/* Header éditorial */}
-        <header className="fade-in mb-9">
+        {/* Hero */}
+        <header className="fade-in mb-8 text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="Tonite" className="h-14 w-auto mb-6" />
-          <h1 className="font-display font-bold leading-[1.1] text-text" style={{ fontSize: 'clamp(1.9rem, 7.5vw, 2.6rem)' }}>
-            Les meilleurs spots{' '}
-            <span style={{ color: '#F195B8' }}>autour de vous</span>
+          <img src="/logo_rose.png" alt="Tonite" className="mx-auto" style={{ width: 'min(58vw, 210px)', height: 'auto' }} />
+          <h1 className="font-display font-bold" style={{ color: INK, fontSize: 'clamp(1.35rem, 5.2vw, 1.7rem)', lineHeight: 1.15, marginTop: '-0.4rem' }}>
+            Les meilleurs spots autour de vous
           </h1>
-          <p className="text-muted text-sm mt-3 font-body leading-relaxed">
-            Pas un annuaire. Une sélection de bars où l&apos;on a envie de boire un verre — près de vous, ouverts quand vous voulez.
+          <p className="text-sm mt-2 font-body leading-relaxed" style={{ color: INK, opacity: 0.72 }}>
+            Une sélection de bars où l&apos;on a envie de boire un verre — près de vous, ouverts quand vous voulez.
           </p>
         </header>
 
-        <div className="flex flex-col gap-8 flex-1">
+        <div className="flex flex-col gap-7 flex-1">
 
           {/* Quand */}
           <section className="fade-up delay-1">
@@ -167,29 +163,29 @@ export default function HomePage() {
                 disabled={geoStatus === 'loading'}
                 className="flex items-center gap-3 w-full px-4 py-3 text-left rounded-xl transition-all"
                 style={{
-                  border: geoStatus === 'ok' ? '1px solid #F5F5F5' : '1px solid #2A2A2A',
-                  background: 'transparent',
+                  border: geoStatus === 'ok' ? `2px solid ${INK}` : `1.5px solid ${INK}`,
+                  background: CREAM,
                 }}
               >
-                <span className="text-sm shrink-0" style={{ color: '#555' }}>
-                  {geoStatus === 'loading' ? '…' : geoStatus === 'ok' ? '↳' : '↝'}
+                <span className="text-sm shrink-0" style={{ color: INK }}>
+                  {geoStatus === 'loading' ? '…' : geoStatus === 'ok' ? '◉' : '↝'}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-body font-medium" style={{ color: geoStatus === 'ok' ? '#F5F5F5' : '#888' }}>
+                  <p className="text-sm font-body font-medium" style={{ color: INK }}>
                     {geoStatus === 'loading' && 'Localisation…'}
                     {geoStatus === 'ok' && `${arrondissement}e arrondissement`}
                     {geoStatus === 'idle' && 'Me géolocaliser'}
                     {(geoStatus === 'denied' || geoStatus === 'unavailable' || geoStatus === 'https_required') && 'Géolocalisation indisponible'}
                   </p>
-                  {geoError && <p className="text-[11px] mt-0.5" style={{ color: '#F195B8' }}>{geoError}</p>}
-                  {!geoError && geoStatus === 'ok' && <p className="text-[11px] mt-0.5 text-muted">Appuie pour modifier</p>}
+                  {geoError && <p className="text-[11px] mt-0.5" style={{ color: '#A8325F' }}>{geoError}</p>}
+                  {!geoError && geoStatus === 'ok' && <p className="text-[11px] mt-0.5" style={{ color: INK, opacity: 0.6 }}>Appuie pour modifier</p>}
                 </div>
               </button>
 
               <div className="flex items-center gap-3">
-                <div className="flex-1 h-px" style={{ background: '#1e1e1e' }} />
-                <span className="text-muted text-xs font-body">ou</span>
-                <div className="flex-1 h-px" style={{ background: '#1e1e1e' }} />
+                <div className="flex-1 h-px" style={{ background: 'rgba(26,44,42,0.22)' }} />
+                <span className="text-xs font-body" style={{ color: INK, opacity: 0.55 }}>ou</span>
+                <div className="flex-1 h-px" style={{ background: 'rgba(26,44,42,0.22)' }} />
               </div>
 
               <div className="relative">
@@ -201,22 +197,30 @@ export default function HomePage() {
                       setGeoStatus('idle'); setUserLat(null); setUserLng(null)
                     }
                   }}
-                  className="input-style pr-10 cursor-pointer"
-                  style={arrondissement ? { borderColor: '#F5F5F5' } : {}}
+                  className="w-full font-body cursor-pointer rounded-xl"
+                  style={{
+                    background: CREAM,
+                    color: INK,
+                    border: arrondissement ? `2px solid ${INK}` : `1.5px solid ${INK}`,
+                    padding: '12px 40px 12px 14px',
+                    fontSize: 14,
+                    WebkitAppearance: 'none',
+                    appearance: 'none',
+                  }}
                 >
                   <option value="">Choisir un arrondissement</option>
                   {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
                     <option key={n} value={n}>{n}e arrondissement</option>
                   ))}
                 </select>
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none text-xs">▾</span>
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-xs" style={{ color: INK }}>▾</span>
               </div>
             </div>
           </section>
 
           {/* Budget */}
           <section className="fade-up delay-3">
-            <Label>Budget <span style={{ color: '#444', letterSpacing: 0 }}>· optionnel</span></Label>
+            <Label>Budget <span style={{ opacity: 0.5, letterSpacing: 0 }}>· optionnel</span></Label>
             <div className="grid grid-cols-3 gap-2">
               {[1, 2, 3].map((b) => {
                 const sel = budgets.includes(b)
@@ -226,9 +230,9 @@ export default function HomePage() {
                     onClick={() => toggleBudget(b)}
                     className="py-3 rounded-xl text-center transition-all font-display font-semibold"
                     style={{
-                      border: sel ? '1px solid #F195B8' : '1px solid #2A2A2A',
-                      background: sel ? 'rgba(241,149,184,0.08)' : 'transparent',
-                      color: sel ? '#F195B8' : '#888',
+                      border: `1.5px solid ${INK}`,
+                      background: sel ? YELLOW : CREAM,
+                      color: INK,
                     }}
                   >
                     {'€'.repeat(b)}
@@ -247,19 +251,20 @@ export default function HomePage() {
             disabled={!ready || loading}
             className="w-full py-4 rounded-full text-base font-display font-semibold tracking-wide transition-all"
             style={ready && !loading ? {
-              background: '#F195B8',
-              color: '#0A0A0A',
+              background: INK,
+              color: PINK,
             } : {
-              background: '#1a1a1a',
-              color: '#444',
+              background: CREAM,
+              color: 'rgba(26,44,42,0.4)',
+              border: '1.5px solid rgba(26,44,42,0.2)',
               cursor: 'not-allowed',
             }}
           >
             {loading ? 'Recherche…' : 'Voir les spots →'}
           </button>
-          <p className="text-center text-muted text-xs mt-4 font-body">
+          <p className="text-center text-xs mt-4 font-body" style={{ color: INK, opacity: 0.72 }}>
             Pas de compte.{' '}
-            <a href="/suggerer" className="underline underline-offset-2 hover:text-text transition-colors">
+            <a href="/suggerer" className="underline underline-offset-2 font-medium" style={{ color: INK }}>
               Suggérer un lieu
             </a>
           </p>
@@ -276,9 +281,9 @@ function Chip({ children, selected, onClick }: { children: React.ReactNode; sele
       onClick={onClick}
       className="shrink-0 px-4 py-2.5 rounded-full text-sm font-body font-medium transition-all"
       style={{
-        border: selected ? '1px solid #F195B8' : '1px solid #2A2A2A',
-        background: selected ? 'rgba(241,149,184,0.10)' : 'transparent',
-        color: selected ? '#F195B8' : '#999',
+        border: `1.5px solid ${INK}`,
+        background: selected ? INK : 'transparent',
+        color: selected ? PINK : INK,
       }}
     >
       {children}
@@ -288,7 +293,7 @@ function Chip({ children, selected, onClick }: { children: React.ReactNode; sele
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[10px] tracking-[0.18em] uppercase mb-3 font-body font-medium" style={{ color: '#555' }}>
+    <p className="text-[10px] tracking-[0.2em] uppercase mb-3 font-body font-medium" style={{ color: INK, opacity: 0.6 }}>
       {children}
     </p>
   )

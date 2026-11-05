@@ -14,6 +14,13 @@
   --pink-deep: #D4649A;
   --grad-from: #F195B8;
   --grad-to: #D4649A;
+
+  /* ── Nouvelle DA « riso pop » (migration en cours, écran par écran) ── */
+  --tn-pink:   #F4BCD8; /* surface signature / hero */
+  --tn-ink:    #1A2C2A; /* encre : textes, filets, boutons pleins */
+  --tn-yellow: #F9D56E; /* accent : état actif, tags */
+  --tn-cream:  #FBF4EC; /* surfaces de contenu (cartes, champs) */
+  --tn-rose-2: #F9DCEA; /* rose clair secondaire */
 }
 
 /* ── Base ── */
