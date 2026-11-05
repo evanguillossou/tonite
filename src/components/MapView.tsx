@@ -89,7 +89,7 @@ export default function MapView({
 
       const map = new mapboxgl.Map({
         container: containerRef.current,
-        style: 'mapbox://styles/mapbox/dark-v11',
+        style: 'mapbox://styles/mapbox/light-v11',
         center: PARIS,
         zoom: 11.5,
         attributionControl: false,
@@ -117,8 +117,8 @@ export default function MapView({
           el.className = 'tonite-pin'
           el.style.cssText = [
             'width:16px', 'height:16px', 'border-radius:50%',
-            'background:#F195B8', 'border:2px solid #0A0A0A',
-            'box-shadow:0 0 0 1px rgba(241,149,184,0.5), 0 2px 6px rgba(0,0,0,0.5)',
+            'background:#1A2C2A', 'border:2px solid #FBF4EC',
+            'box-shadow:0 0 0 1px rgba(26,44,42,0.25), 0 2px 6px rgba(26,44,42,0.35)',
             'cursor:pointer',
             'transition:transform 150ms ease, width 150ms ease, height 150ms ease',
           ].join(';')
@@ -159,16 +159,16 @@ export default function MapView({
   useEffect(() => {
     markersRef.current.forEach(({ id, el }) => {
       if (id === selectedId) {
-        el.style.background = '#fff'
+        el.style.background = '#F9D56E'
         el.style.width = '22px'
         el.style.height = '22px'
-        el.style.boxShadow = '0 0 0 3px rgba(241,149,184,0.9), 0 2px 10px rgba(0,0,0,0.6)'
+        el.style.boxShadow = '0 0 0 3px rgba(26,44,42,0.9), 0 2px 10px rgba(26,44,42,0.4)'
         el.style.zIndex = '10'
       } else {
-        el.style.background = '#F195B8'
+        el.style.background = '#1A2C2A'
         el.style.width = '16px'
         el.style.height = '16px'
-        el.style.boxShadow = '0 0 0 1px rgba(241,149,184,0.5), 0 2px 6px rgba(0,0,0,0.5)'
+        el.style.boxShadow = '0 0 0 1px rgba(26,44,42,0.25), 0 2px 6px rgba(26,44,42,0.35)'
         el.style.zIndex = ''
       }
     })

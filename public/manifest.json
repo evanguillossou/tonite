@@ -4,13 +4,13 @@
   "description": "Paris Nightlife — trouve ton spot ce soir",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0A0A0A",
-  "theme_color": "#0A0A0A",
+  "background_color": "#F4BCD8",
+  "theme_color": "#F4BCD8",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/logo_fondnoir.png",
-      "sizes": "512x512",
+      "src": "/logo_rose.png",
+      "sizes": "500x500",
       "type": "image/png",
       "purpose": "any maskable"
     }

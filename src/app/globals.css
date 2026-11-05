@@ -4,16 +4,16 @@
 
 /* ── Variables ── */
 :root {
-  --bg: #0A0A0A;
-  --card: #1A1A1A;
-  --border: #2A2A2A;
-  --text: #F5F5F5;
-  --muted: #666666;
-  --subtle: #333333;
-  --pink: #F195B8;
-  --pink-deep: #D4649A;
-  --grad-from: #F195B8;
-  --grad-to: #D4649A;
+  --bg: #FBF4EC;        /* crème : canvas de contenu */
+  --card: #FFFFFF;
+  --border: #E6DCCB;
+  --text: #1A2C2A;      /* vert encre */
+  --muted: #6E7B74;
+  --subtle: #CFC5B4;
+  --pink: #F4BCD8;
+  --pink-deep: #D99BBE;
+  --grad-from: #1A2C2A;
+  --grad-to: #1A2C2A;
 
   /* ── Nouvelle DA « riso pop » (migration en cours, écran par écran) ── */
   --tn-pink:   #F4BCD8; /* surface signature / hero */
@@ -51,35 +51,31 @@ html, body {
 }
 
 .grad-border {
-  border: 1px solid transparent;
+  border: 1px solid var(--tn-ink);
   background-clip: padding-box;
-  box-shadow: 0 0 0 1px rgba(241,149,184,0.4), 0 0 16px rgba(212,100,154,0.2);
 }
 
-/* ── Glass card ── */
+/* ── Carte (ex-glass, désormais à plat) ── */
 .glass {
-  background: rgba(255,255,255,0.03);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: #FFFFFF;
+  border: 1px solid var(--border);
   border-radius: 16px;
 }
 
 /* ── CTA button ── */
 .btn-cta {
-  background: linear-gradient(135deg, var(--grad-from), var(--grad-to));
-  color: #fff;
+  background: var(--tn-ink);
+  color: var(--tn-pink);
   font-weight: 600;
   border-radius: 100px;
   transition: filter 150ms ease, transform 150ms ease;
-  box-shadow: 0 0 32px rgba(241,149,184,0.35);
 }
-.btn-cta:hover  { filter: brightness(1.1); }
+.btn-cta:hover  { filter: brightness(1.08); }
 .btn-cta:active { transform: scale(0.97); }
 .btn-cta:disabled {
-  background: var(--subtle);
+  background: var(--tn-cream);
   color: var(--muted);
-  box-shadow: none;
+  border: 1px solid var(--border);
   cursor: not-allowed;
 }
 
@@ -92,11 +88,11 @@ html, body {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.pill:hover { border-color: var(--subtle); transform: translateY(-2px); }
+.pill:hover { border-color: var(--tn-ink); transform: translateY(-2px); }
 .pill.selected {
-  background: rgba(241,149,184,0.12);
-  border-color: transparent;
-  box-shadow: 0 0 0 1px rgba(241,149,184,0.5), 0 0 20px rgba(212,100,154,0.2);
+  background: var(--tn-yellow);
+  border-color: var(--tn-ink);
+  color: var(--tn-ink);
 }
 
 /* ── Pill card (énergie) ── */
@@ -108,11 +104,10 @@ html, body {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.pill-card:hover { border-color: var(--subtle); transform: translateY(-2px); }
+.pill-card:hover { border-color: var(--tn-ink); transform: translateY(-2px); }
 .pill-card.selected {
-  background: rgba(241,149,184,0.1);
-  border-color: transparent;
-  box-shadow: 0 0 0 1px rgba(241,149,184,0.45), 0 0 20px rgba(212,100,154,0.18);
+  background: var(--tn-rose-2);
+  border-color: var(--tn-ink);
 }
 
 /* ── Input ── */
@@ -131,7 +126,7 @@ html, body {
   -webkit-appearance: none;
 }
 .input-style::placeholder { color: var(--muted); }
-.input-style:focus { border-color: rgba(241,149,184,0.6); }
+.input-style:focus { border-color: var(--tn-ink); }
 
 /* ── Animations ── */
 @keyframes fadeUp {

@@ -13,18 +13,18 @@ const config: Config = {
         body: ['var(--font-body)', 'sans-serif'],
       },
       colors: {
-        bg:      '#0A0A0A',
-        card:    '#1A1A1A',
-        border:  '#2A2A2A',
-        subtle:  '#333333',
-        muted:   '#666666',
-        text:    '#F5F5F5',
-        accent:  '#FF6B35',
-        accent2: '#E91E8C',
+        bg:      '#FBF4EC', // crème : canvas de contenu
+        card:    '#FFFFFF',
+        border:  '#E6DCCB',
+        subtle:  '#CFC5B4',
+        muted:   '#6E7B74',
+        text:    '#1A2C2A', // vert encre
+        accent:  '#F4BCD8', // rose
+        accent2: '#F9D56E', // jaune
       },
       backgroundImage: {
-        'grad-accent': 'linear-gradient(135deg, #FF6B35, #E91E8C)',
-        'grad-accent-h': 'linear-gradient(90deg, #FF6B35, #E91E8C)',
+        'grad-accent': 'linear-gradient(135deg, #1A2C2A, #1A2C2A)',
+        'grad-accent-h': 'linear-gradient(90deg, #1A2C2A, #1A2C2A)',
       },
       borderRadius: {
         '2xl': '16px',
