@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import AdminGuard from '@/components/AdminGuard'
 import AdminNav from '@/components/AdminNav'
+import PhotoUploader, { isDeadGoogleLink } from '@/components/admin/PhotoUploader'
 import type { Spot } from '@/types'
 
 const JOURS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
@@ -91,6 +92,7 @@ export default function SpotsPage() {
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({ vibe: '', actif: '', arr: '' })
   const [search, setSearch] = useState('')
+  const [photoFilter, setPhotoFilter] = useState('')
   const [editing, setEditing] = useState<Spot | null>(null)
   const [editingJours, setEditingJours] = useState<JourHoraire[]>(defaultJours())
   const [saving, setSaving] = useState(false)
@@ -110,12 +112,17 @@ export default function SpotsPage() {
 
   useEffect(() => { loadSpots() }, [filters]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filteredSpots = search.trim()
+  const searchedSpots = search.trim()
     ? spots.filter(s =>
         s.nom.toLowerCase().includes(search.toLowerCase()) ||
         (s.vibe || '').toLowerCase().includes(search.toLowerCase())
       )
     : spots
+  // « À refaire » = pas de photo, ou photo principale = lien Google expiré
+  const needsPhoto = (s: Spot) => !s.photo_url || isDeadGoogleLink(s.photo_url)
+  const filteredSpots = photoFilter === 'a-refaire' ? searchedSpots.filter(needsPhoto)
+    : photoFilter === 'ok' ? searchedSpots.filter(s => !needsPhoto(s))
+    : searchedSpots
 
   async function deleteSpot(id: string) {
     if (!confirm('Supprimer ce spot définitivement ?')) return
@@ -195,6 +202,15 @@ export default function SpotsPage() {
                 <option key={n} value={n}>{n}e</option>
               ))}
             </select>
+            <select
+              value={photoFilter}
+              onChange={(e) => setPhotoFilter(e.target.value)}
+              className="bg-[#141414] border border-[#222] text-[#f5f5f0] text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-[#8B5CF6]"
+            >
+              <option value="">Photos : toutes</option>
+              <option value="a-refaire">Photos à refaire</option>
+              <option value="ok">Photos OK</option>
+            </select>
           </div>
 
           {loading ? (
@@ -220,9 +236,11 @@ export default function SpotsPage() {
                       <td className="py-3 pr-4 text-[#888]">{spot.type}</td>
                       <td className="py-3 pr-4 text-[#888]">{spot.arrondissement}e</td>
                       <td className="py-3 pr-4">
-                        {spot.photo_url
-                          ? <img src={spot.photo_url} alt="" className="w-8 h-8 rounded object-cover" />
-                          : <span className="text-[#333]">–</span>
+                        {!spot.photo_url
+                          ? <span className="text-[#333]">–</span>
+                          : isDeadGoogleLink(spot.photo_url)
+                            ? <span className="text-[10px] text-[#e0a35a]">expirée</span>
+                            : <img src={spot.photo_url} alt="" className="w-8 h-8 rounded object-cover" />
                         }
                       </td>
                       <td className="py-3 pr-4">
@@ -343,7 +361,40 @@ export default function SpotsPage() {
             </Field>
 
             <div>
-              <label className="text-[#6b6b6b] text-xs mb-1.5 block">Photos (1 à 4 URLs)</label>
+              <label className="text-[#6b6b6b] text-xs mb-1.5 block">Photos (4 max — la 1ʳᵉ est la photo principale)</label>
+              {(() => {
+                const filled = (editing.photos && editing.photos.length > 0 ? editing.photos : [editing.photo_url || ''])
+                  .filter((p) => p && p.trim())
+                const dead = filled.filter((p) => isDeadGoogleLink(p))
+                return (
+                  <div className="flex flex-col gap-2 mb-3">
+                    <PhotoUploader
+                      spotId={editing.id}
+                      remaining={4 - (filled.length - dead.length)}
+                      onUploaded={(url) => setEditing((prev) => {
+                        if (!prev) return prev
+                        // Ajoute la photo et écarte les liens Google expirés pour qu'elle devienne la principale
+                        const alive = (prev.photos && prev.photos.length > 0 ? prev.photos : [prev.photo_url || ''])
+                          .filter((p) => p && p.trim() && !isDeadGoogleLink(p))
+                        const next = [...alive, url]
+                        return { ...prev, photos: next, photo_url: next[0] }
+                      })}
+                    />
+                    {dead.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = filled.filter((p) => !isDeadGoogleLink(p))
+                          setEditing({ ...editing, photos: next, photo_url: next[0] || null })
+                        }}
+                        className="text-xs text-left text-[#e0a35a] hover:text-[#f0b46a] transition-colors"
+                      >
+                        ⚠ {dead.length} lien{dead.length > 1 ? 's' : ''} Google expiré{dead.length > 1 ? 's' : ''} sur cette fiche — cliquer pour {dead.length > 1 ? 'les' : 'le'} retirer
+                      </button>
+                    )}
+                  </div>
+                )
+              })()}
               <div className="flex flex-col gap-2">
                 {(editing.photos && editing.photos.length > 0 ? editing.photos : [editing.photo_url || '']).map((url, i) => (
                   <div key={i} className="flex gap-2 items-center">
@@ -357,7 +408,10 @@ export default function SpotsPage() {
                       placeholder={`URL photo ${i + 1}`}
                       className="input-style flex-1 text-sm"
                     />
-                    {url && (
+                    {url && isDeadGoogleLink(url) && (
+                      <span className="text-[10px] text-[#e0a35a] shrink-0">expiré</span>
+                    )}
+                    {url && !isDeadGoogleLink(url) && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={url} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
                     )}
@@ -381,7 +435,7 @@ export default function SpotsPage() {
                       setEditing({ ...editing, photos: [...current, ''] })
                     }}
                     className="text-xs text-[#555] hover:text-[#888] text-left transition-colors py-1"
-                  >+ Ajouter une photo</button>
+                  >+ Coller un lien d&apos;image (URL)</button>
                 )}
               </div>
             </div>

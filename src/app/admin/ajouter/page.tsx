@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import AdminGuard from '@/components/AdminGuard'
 import AdminNav from '@/components/AdminNav'
+import PhotoUploader, { isDeadGoogleLink } from '@/components/admin/PhotoUploader'
 
 const JOURS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
 
@@ -296,7 +297,17 @@ export default function AjouterPage() {
 
             {/* Photos 1 à 4 */}
             <div>
-              <label className="text-[#6b6b6b] text-xs mb-1.5 block">Photos (1 à 4 URLs)</label>
+              <label className="text-[#6b6b6b] text-xs mb-1.5 block">Photos (4 max — la 1ʳᵉ est la photo principale)</label>
+              <div className="mb-3">
+                <PhotoUploader
+                  spotId="nouveau"
+                  remaining={4 - form.photos.filter((p) => p.trim() && !isDeadGoogleLink(p)).length}
+                  onUploaded={(url) => setForm((prev) => {
+                    const alive = prev.photos.map((p) => p.trim()).filter((p) => p && !isDeadGoogleLink(p))
+                    return { ...prev, photos: [...alive, url] }
+                  })}
+                />
+              </div>
               <div className="flex flex-col gap-2">
                 {form.photos.map((url, i) => (
                   <div key={i} className="flex gap-2 items-center">
@@ -321,7 +332,7 @@ export default function AjouterPage() {
                     onClick={addPhoto}
                     className="text-xs text-[#555] hover:text-[#888] text-left transition-colors py-1"
                   >
-                    + Ajouter une photo
+                    + Coller un lien d&apos;image (URL)
                   </button>
                 )}
               </div>
