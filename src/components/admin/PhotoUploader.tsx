@@ -3,9 +3,10 @@
 import { useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-// Taille max du plus grand côté et qualité JPG après compression (≈150-300 Ko par photo)
-const MAX_SIDE = 1600
-const QUALITY = 0.82
+// Taille max du plus grand côté et qualité JPG après compression (≈250 Ko par photo).
+// 1200 px suffit même sur écran Retina, et ménage le quota gratuit Supabase (1 Go stockage, trafic mensuel).
+const MAX_SIDE = 1200
+const QUALITY = 0.8
 
 // Liens « copier l'adresse de l'image » de Google Maps : temporaires, tous expirés.
 export function isDeadGoogleLink(url: string | null | undefined) {
