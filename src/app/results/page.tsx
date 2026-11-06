@@ -621,8 +621,8 @@ function SpotCard({ spot, index, onTap, isFav, onFavToggle }: {
   )
 }
 
-function ToniteWordmark() {
-  return <ThemeLogo variant="wordmark" style={{ height: 30, width: 'auto' }} />
+function ToniteWordmark({ href }: { href: string }) {
+  return <ThemeLogo variant="wordmark" href={href} style={{ height: 30, width: 'auto' }} />
 }
 
 
@@ -729,7 +729,7 @@ function ResultsContent() {
           style={{ border: LINE, color: INK }}>
           ← Retour
         </button>
-        <div className="justify-self-center"><ToniteWordmark /></div>
+        <div className="justify-self-center"><ToniteWordmark href={homeUrl} /></div>
         <div className="justify-self-end"><ThemeToggle /></div>
       </div>
 

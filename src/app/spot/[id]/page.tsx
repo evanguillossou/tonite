@@ -148,7 +148,7 @@ export default function SpotPage() {
 
         {/* Logo */}
         <div className="flex justify-center mb-2">
-          <ThemeLogo variant="wordmark" style={{ height: 26, width: 'auto' }} />
+          <ThemeLogo variant="wordmark" href={isClub(spot) ? '/?c=danser' : '/'} style={{ height: 26, width: 'auto' }} />
         </div>
 
         {/* Titre */}

@@ -6,7 +6,7 @@ import ThemeToggle from '@/components/ThemeToggle'
 import ThemeLogo from '@/components/ThemeLogo'
 
 function ToniteWordmark() {
-  return <ThemeLogo variant="wordmark" style={{ height: 30, width: 'auto' }} />
+  return <ThemeLogo variant="wordmark" href="/" style={{ height: 30, width: 'auto' }} />
 }
 
 export default function SuggererPage() {
