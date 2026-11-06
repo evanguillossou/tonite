@@ -12,7 +12,8 @@ const TYPES_BY_CATEGORIE: Record<string, string[]> = {
   bouffe:   ['bistrot', 'restaurant', 'grec', 'asiatique', 'italien', 'tapas', 'bonne bouffe'],
 }
 
-// Vérifie si un spot est ouvert maintenant (même logique que côté client)
+// ─── Horaires ────────────────────────────────────────────────────────────────
+
 type Period = { open: { day: number; time: string }; close?: { day: number; time: string } }
 
 // Vérifie si un spot est ouvert un jour (0=dimanche) à une heure (HHMM) donnés.
@@ -33,52 +34,82 @@ function isOpenAt(horaires: unknown, day: number, time: number): boolean {
   return false
 }
 
-function isOpenNow(horaires: unknown): boolean {
-  const now = new Date()
-  return isOpenAt(horaires, now.getDay(), now.getHours() * 100 + now.getMinutes())
+// Jour et heure à Paris : le serveur Vercel tourne en UTC (1 à 2 h de décalage).
+function parisNow(): { day: number; time: number } {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Paris', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(new Date())
+  const get = (t: string) => parts.find(p => p.type === t)?.value || ''
+  const day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(get('weekday'))
+  return { day, time: Number(get('hour')) * 100 + Number(get('minute')) }
 }
 
-async function fetchFromArr(
-  supabase: ReturnType<typeof createAdminClient>,
-  arrList: number[],
-  filters: {
-    types?: string[]
-    requirePhoto?: boolean
-    budgets?: number[]
-  },
-  seenIds: Set<string>,
-  limit: number
-): Promise<Record<string, unknown>[]> {
-  const collected: Record<string, unknown>[] = []
-  for (const a of arrList) {
-    if (collected.length >= limit) break
-    let q = supabase.from('spots').select('*').eq('actif', true).eq('arrondissement', a)
-    if (filters.types && filters.types.length > 0) q = q.in('type', filters.types)
-    if (filters.budgets && filters.budgets.length > 0) q = q.in('budget', filters.budgets)
-    if (filters.requirePhoto) q = q.not('photo_url', 'is', null)
-    q = q.limit(30)
-    const { data } = await q
-    for (const s of data || []) {
-      if (!seenIds.has(s.id as string)) {
-        seenIds.add(s.id as string)
-        collected.push(s as Record<string, unknown>)
-      }
-    }
+// ─── Classement ──────────────────────────────────────────────────────────────
+//
+// On ne filtre plus : on classe tous les spots de la catégorie, puis on sert les 3 premiers
+// (« Autre sélection » sert les 3 suivants). Ordre, du plus prioritaire au moins prioritaire :
+//   1. arrondissement choisi, bon prix
+//   2. arrondissement choisi, prix voisin (€ ↔ €€, €€ ↔ €€€)
+//   3. arrondissements voisins (centres à moins de 2,5 km), bon prix
+//   4. arrondissements voisins, prix voisin
+//   5. puis cercles suivants (4 km, 6 km, reste de Paris), à chaque fois bon prix puis prix voisin
+//   6. en dernier recours : écart de 2 crans (€ ↔ €€€)
+// À rang égal : spot avec une vraie photo d'abord, puis au hasard (pour varier les sélections).
+// Le filtre « ouvert » s'applique AVANT le classement : si rien n'est ouvert à côté, on va plus loin.
+
+// Cercles de distance : on épuise un cercle (bon prix puis prix voisin) avant de passer au suivant
+const ARR_RINGS_KM = [2.5, 4, 6]       // depuis le centre de l'arrondissement choisi
+const GEO_RINGS_KM = [1.2, 2.5, 4, 6]  // « autour de moi », depuis la position de l'utilisateur
+
+function ringIndex(km: number, rings: number[]) {
+  const i = rings.findIndex(r => km <= r)
+  return i === -1 ? rings.length : i
+}
+
+type Candidate = {
+  id: string
+  arrondissement: number | null
+  budget: number | null
+  coordonnees_lat: number | null
+  coordonnees_lng: number | null
+  horaires?: unknown
+}
+
+// Écart de prix entre le spot et les budgets demandés (0 = bon prix)
+function budgetGap(budget: number | null, budgets: number[]): number {
+  if (budgets.length === 0) return 0
+  if (!budget) return 1
+  return Math.min(...budgets.map(b => Math.abs(b - budget)))
+}
+
+// Position du spot : ses coordonnées GPS, sinon le centre de son arrondissement
+function spotPosition(s: Candidate): { lat: number; lng: number; exact: boolean } | null {
+  const lat = Number(s.coordonnees_lat), lng = Number(s.coordonnees_lng)
+  if (lat && lng) return { lat, lng, exact: true }
+  const c = s.arrondissement ? ARR_CENTERS[s.arrondissement] : undefined
+  return c ? { ...c, exact: false } : null
+}
+
+// Compare deux clés de tri (tableaux de nombres) dans l'ordre
+function compareKeys(a: number[], b: number[]) {
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const d = (a[i] ?? 0) - (b[i] ?? 0)
+    if (d !== 0) return d
   }
-  return collected
+  return 0
 }
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const categorie   = searchParams.get('categorie') || 'bar'
   const openNow     = searchParams.get('openNow') === 'true'
-  const excludeRaw  = searchParams.get('exclude') || ''
-  const excludeIds  = excludeRaw.split(',').filter(Boolean)
+  const excludeIds  = new Set((searchParams.get('exclude') || '').split(',').filter(Boolean))
   const lat = searchParams.get('lat') ? Number(searchParams.get('lat')) : null
   const lng = searchParams.get('lng') ? Number(searchParams.get('lng')) : null
-  const arr = searchParams.get('arr') ? Number(searchParams.get('arr')) : null
+  const arrParam = searchParams.get('arr') ? Number(searchParams.get('arr')) : null
+  const arr = arrParam && ARR_CENTERS[arrParam] ? arrParam : null
 
-  // Filtre budget (1-3), CSV ; vide = tous
+  // Budgets demandés (1-3), CSV ; vide = tous
   const budgets = (searchParams.get('budget') || '')
     .split(',').map(Number).filter(n => n >= 1 && n <= 3)
 
@@ -87,100 +118,94 @@ export async function GET(req: NextRequest) {
   const openAtDay  = searchParams.get('openAtDay') != null ? Number(searchParams.get('openAtDay')) : null
   const hasOpenAt  = openAtTime != null && openAtDay != null && !Number.isNaN(openAtTime) && !Number.isNaN(openAtDay)
 
+  // Quel moment tester ? (null = pas de filtre d'horaire)
+  const when = hasOpenAt ? { day: openAtDay!, time: openAtTime! } : openNow ? parisNow() : null
+  const isOpen = (s: { horaires?: unknown }) => !when || isOpenAt(s.horaires, when.day, when.time)
+
   const supabase = createAdminClient()
-
-  // Arrondissements triés du plus proche au plus loin
-  let arrByProximity: number[]
-  if (lat && lng) {
-    arrByProximity = arrondissementsByDistance(lat, lng)
-  } else if (arr) {
-    // Utilise le centre GPS de l'arrondissement pour trier les voisins géographiquement
-    const center = ARR_CENTERS[arr]
-    arrByProximity = center
-      ? arrondissementsByDistance(center.lat, center.lng)
-      : [arr, ...Array.from({ length: 20 }, (_, i) => i + 1).filter(n => n !== arr)]
-  } else {
-    arrByProximity = Array.from({ length: 20 }, (_, i) => i + 1)
-  }
-
-  const nearbyArrs   = arrByProximity.slice(0, 4)
-  const extendedArrs = arrByProximity.slice(0, 8)
-
-  const seenIds = new Set(excludeIds)
-  const collected: Record<string, unknown>[] = []
-
   const types = TYPES_BY_CATEGORIE[categorie] || TYPES_BY_CATEGORIE['bar']
 
-  // ── Mode carte : tous les spots de la catégorie avec coordonnées GPS ──
+  // ── Mode carte : tous les spots géolocalisés de la catégorie ──
   if (searchParams.get('all') === 'true') {
-    let query = supabase
+    const { data } = await supabase
       .from('spots')
       .select('*')
       .eq('actif', true)
       .in('type', types)
       .not('coordonnees_lat', 'is', null)
       .not('coordonnees_lng', 'is', null)
-    if (budgets.length > 0) query = query.in('budget', budgets)
-    const { data } = await query.limit(500)
-    let list = (data || []) as Record<string, unknown>[]
-    if (openNow) list = list.filter(s => isOpenNow(s.horaires))
-    else if (hasOpenAt) list = list.filter(s => isOpenAt(s.horaires, openAtDay!, openAtTime!))
-    return NextResponse.json(list)
+      .limit(2000)
+    const open = ((data || []) as (Candidate & Record<string, unknown>)[]).filter(isOpen)
+    // Bon prix ; s'il n'y en a aucun, prix voisins ; sinon tout (la carte n'est jamais vide à tort)
+    const exact = open.filter(s => budgetGap(s.budget, budgets) === 0)
+    const close = open.filter(s => budgetGap(s.budget, budgets) <= 1)
+    return NextResponse.json(exact.length ? exact : close.length ? close : open)
   }
 
-  // ── Passes avec photo obligatoire ──
-  collected.push(...await fetchFromArr(supabase, nearbyArrs, { types, requirePhoto: true, budgets }, seenIds, 9))
+  // ── Mode liste : on classe toute la catégorie (requête légère), puis on charge les 3 retenus ──
+  const columns = 'id, arrondissement, budget, coordonnees_lat, coordonnees_lng' + (when ? ', horaires' : '')
+  const [candRes, photoRes] = await Promise.all([
+    supabase.from('spots').select(columns).eq('actif', true).in('type', types).limit(2000),
+    // Spots avec une vraie photo (pas vide, pas un lien Google expiré)
+    supabase.from('spots').select('id').eq('actif', true).in('type', types)
+      .not('photo_url', 'is', null).not('photo_url', 'like', '%googleusercontent.com/gps-cs-s/%').limit(2000),
+  ])
+  if (candRes.error) return NextResponse.json({ error: 'Lecture impossible' }, { status: 500 })
 
-  if (collected.length < 3) {
-    collected.push(...await fetchFromArr(supabase, extendedArrs, { types, requirePhoto: true, budgets }, seenIds, 9))
-  }
+  const withPhoto = new Set(((photoRes.data || []) as { id: string }[]).map(s => s.id))
+  const candidates = ((candRes.data || []) as unknown as Candidate[])
+    .filter(s => !excludeIds.has(s.id))
+    .filter(isOpen)
 
-  if (collected.length < 3) {
-    collected.push(...await fetchFromArr(supabase, arrByProximity, { types, requirePhoto: true, budgets }, seenIds, 9))
-  }
+  // Contexte de localisation
+  const user = lat && lng ? { lat, lng } : null
+  const center = !user && arr ? ARR_CENTERS[arr] : null
+  const arrRank = new Map<number, number>()
+  if (center) arrondissementsByDistance(center.lat, center.lng).forEach((a, i) => arrRank.set(a, i))
 
-  // ── Passes sans contrainte photo (fallback) ──
-  if (collected.length < 3) {
-    collected.push(...await fetchFromArr(supabase, nearbyArrs, { types, budgets }, seenIds, 9))
-  }
+  const ranked = candidates.map(s => {
+    const gap = budgetGap(s.budget, budgets)
+    const lastResort = gap >= 2 ? 1 : 0
+    const photo = withPhoto.has(s.id) ? 0 : 1
+    const random = Math.random()
+    const pos = spotPosition(s)
+    let key: number[]
+    let distance: number | undefined
 
-  if (collected.length < 3) {
-    collected.push(...await fetchFromArr(supabase, arrByProximity, { types, budgets }, seenIds, 9))
-  }
+    if (user) {
+      // « Autour de moi » : anneaux de distance, bon prix d'abord dans chaque anneau
+      const d = pos ? haversineKm(user.lat, user.lng, pos.lat, pos.lng) : 99
+      const ring = ringIndex(d, GEO_RINGS_KM)
+      if (pos?.exact) distance = d
+      key = [lastResort, ring, gap, photo, d]
+    } else if (center && arr) {
+      // Arrondissement choisi d'abord, puis les arrondissements par cercles de distance
+      const a = s.arrondissement || 0
+      const aCenter = ARR_CENTERS[a]
+      const zone = a === arr ? 0
+        : aCenter ? 1 + ringIndex(haversineKm(center.lat, center.lng, aCenter.lat, aCenter.lng), ARR_RINGS_KM)
+        : 1 + ARR_RINGS_KM.length
+      key = [lastResort, zone, gap, arrRank.get(a) ?? 99, photo, random]
+    } else {
+      // Sans localisation : bon prix, photo, hasard
+      key = [lastResort, gap, photo, random]
+    }
+    return { id: s.id, key, distance }
+  }).sort((a, b) => compareKeys(a.key, b.key))
 
-  // Trier : spots avec photo en premier, puis par distance si géoloc dispo
-  let result = collected
-  if (lat && lng) {
-    result = collected
-      .filter(s => s.coordonnees_lat && s.coordonnees_lng)
-      .map(s => ({
-        ...s,
-        _distance: haversineKm(lat, lng, s.coordonnees_lat as number, s.coordonnees_lng as number),
-      }))
-      .sort((a, b) => {
-        const aHasPhoto = (a as Record<string, unknown>).photo_url ? 0 : 1
-        const bHasPhoto = (b as Record<string, unknown>).photo_url ? 0 : 1
-        if (aHasPhoto !== bHasPhoto) return aHasPhoto - bHasPhoto
-        return (a._distance as number) - (b._distance as number)
-      })
-  } else {
-    // Sans géoloc : photos d'abord, puis aléatoire dans chaque groupe
-    const withPhoto    = collected.filter(s => s.photo_url).sort(() => Math.random() - 0.5)
-    const withoutPhoto = collected.filter(s => !s.photo_url).sort(() => Math.random() - 0.5)
-    result = [...withPhoto, ...withoutPhoto]
-  }
+  const top = ranked.slice(0, 3)
+  if (top.length === 0) return NextResponse.json([])
 
-  // Si openNow : ne garder que les spots ouverts maintenant
-  if (openNow) {
-    const openResults = result.filter(s => isOpenNow(s.horaires))
-    return NextResponse.json(openResults.slice(0, 3))
-  }
+  // Charge les fiches complètes des 3 spots retenus, dans l'ordre du classement
+  const { data: full } = await supabase.from('spots').select('*').in('id', top.map(t => t.id))
+  const byId = new Map(((full || []) as Record<string, unknown>[]).map(s => [s.id as string, s]))
+  const result = top
+    .map(t => {
+      const s = byId.get(t.id)
+      if (!s) return null
+      return t.distance != null ? { ...s, _distance: t.distance } : s
+    })
+    .filter(Boolean)
 
-  // Si openAt : ne garder que les spots ouverts à l'horaire choisi
-  if (hasOpenAt) {
-    const openResults = result.filter(s => isOpenAt(s.horaires, openAtDay!, openAtTime!))
-    return NextResponse.json(openResults.slice(0, 3))
-  }
-
-  return NextResponse.json(result.slice(0, 3))
+  return NextResponse.json(result)
 }
