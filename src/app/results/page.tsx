@@ -124,9 +124,14 @@ function openStatus(periods: Period[] | null): { label: string; open: boolean } 
     const m = openTime % 100
     const days = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam']
     const nextDay = nextPeriod.open.day
-    const dayLabel = nextDay === (day + 1) % 7 ? 'demain' : days[nextDay]
-    const timeLabel = m === 0 ? `${h}h` : `${h}h${String(m).padStart(2,'0')}`
-    return { label: `Fermé · Ouvre ${dayLabel} à ${timeLabel}`, open: false }
+    // « ce soir » pour une ouverture après minuit vue depuis la journée (clubs), rien si c'est plus tard aujourd'hui
+    const tomorrow = nextDay === (day + 1) % 7
+    const dayLabel = nextDay === day && openTime > time ? ''
+      : tomorrow && openTime < 600 && time >= 600 ? 'ce soir '
+      : tomorrow ? 'demain '
+      : `${days[nextDay]} `
+    const timeLabel = h === 0 && m === 0 ? 'minuit' : m === 0 ? `${h}h` : `${h}h${String(m).padStart(2,'0')}`
+    return { label: `Fermé · Ouvre ${dayLabel}à ${timeLabel}`, open: false }
   }
 
   return { label: 'Fermé', open: false }
@@ -634,6 +639,8 @@ function ResultsContent() {
   const openAt = searchParams.get('openAt')
   const openAtDay = searchParams.get('openAtDay')
   const openAtHour = openAt ? Math.floor(parseInt(openAt) / 100) : null
+  // Danser : « ouvert ce soir » au lieu d'une heure précise
+  const soir = searchParams.get('soir') === 'true'
 
   const [spots, setSpots]           = useState<SpotWithDist[]>([])
   const [loading, setLoading]       = useState(true)
@@ -641,7 +648,7 @@ function ResultsContent() {
   const [error, setError]           = useState<string | null>(null)
   const [activeSpot, setActiveSpot] = useState<SpotWithDist | null>(null)
   // « ouvert » actif par défaut si un créneau a été choisi sur l'accueil
-  const [openNow, setOpenNow]       = useState(searchParams.get('openNow') === 'true' || !!openAt)
+  const [openNow, setOpenNow]       = useState(searchParams.get('openNow') === 'true' || !!openAt || soir)
   const [showFavs, setShowFavs]     = useState(false)
   const [view, setView]             = useState<'list' | 'map'>('list')
   const [mapSpots, setMapSpots]     = useState<SpotWithDist[] | null>(null)
@@ -656,7 +663,8 @@ function ResultsContent() {
       if (arr) params.set('arr', arr)
       if (budget) params.set('budget', budget)
       if (withOpenNow) {
-        if (openAt && openAtDay != null) { params.set('openAt', openAt); params.set('openAtDay', openAtDay) }
+        if (soir) params.set('soir', 'true')
+        else if (openAt && openAtDay != null) { params.set('openAt', openAt); params.set('openAtDay', openAtDay) }
         else params.set('openNow', 'true')
       }
       const res = await fetch(`/api/spots?${params}`)
@@ -667,7 +675,7 @@ function ResultsContent() {
     } finally {
       setMapLoading(false)
     }
-  }, [categorie, lat, lng, arr, budget, openAt, openAtDay])
+  }, [categorie, lat, lng, arr, budget, openAt, openAtDay, soir])
 
   function switchView(v: 'list' | 'map') {
     setView(v)
@@ -683,7 +691,8 @@ function ResultsContent() {
       if (arr) params.set('arr', arr)
       if (budget) params.set('budget', budget)
       if (withOpenNow) {
-        if (openAt && openAtDay != null) { params.set('openAt', openAt); params.set('openAtDay', openAtDay) }
+        if (soir) params.set('soir', 'true')
+        else if (openAt && openAtDay != null) { params.set('openAt', openAt); params.set('openAtDay', openAtDay) }
         else params.set('openNow', 'true')
       }
       const res = await fetch(`/api/spots?${params}`)
@@ -696,7 +705,7 @@ function ResultsContent() {
     } finally {
       setLoading(false)
     }
-  }, [categorie, lat, lng, arr, budget, openAt, openAtDay])
+  }, [categorie, lat, lng, arr, budget, openAt, openAtDay, soir])
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchSpots([], openNow) }, [fetchSpots])
@@ -759,7 +768,7 @@ function ResultsContent() {
           }}
         >
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: openNow ? ON_ACCENT : 'transparent', border: `1.5px solid ${openNow ? ON_ACCENT : INK}`, display: 'inline-block', flexShrink: 0 }} />
-          {openAtHour != null ? `Ouvert vers ${openAtHour}h` : 'Ouvert maintenant'}
+          {soir ? 'Ouvert ce soir' : openAtHour != null ? `Ouvert vers ${openAtHour}h` : 'Ouvert maintenant'}
         </button>
 
         {/* Segmented control Liste / Carte */}
@@ -826,7 +835,7 @@ function ResultsContent() {
           {openNow && spots.length === 0 && !loading && (
             <div className="text-center py-8">
               <p className="text-muted text-sm font-body">
-                {openAtHour != null ? `Aucun spot ouvert vers ${openAtHour}h.` : 'Aucun spot ouvert en ce moment.'}
+                {soir ? 'Aucun spot ouvert ce soir.' : openAtHour != null ? `Aucun spot ouvert vers ${openAtHour}h.` : 'Aucun spot ouvert en ce moment.'}
               </p>
               <button onClick={() => { setOpenNow(false); fetchSpots([]) }} className="text-xs font-body underline mt-2 font-medium" style={{ color: INK }}>
                 Voir tous les spots

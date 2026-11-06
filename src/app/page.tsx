@@ -46,7 +46,7 @@ const MODE_TEXT: Record<Mode, { categorie: string; tagline: string; quand: strin
   },
   danser: {
     categorie: 'clubbing',
-    tagline: "Une sélection de clubs où l'on a envie de danser, près de vous, ouverts quand vous voulez.",
+    tagline: "Une sélection de clubs où l'on a envie de danser, près de vous, ouverts ce soir.",
     quand: 'Quand tu veux danser',
   },
 }
@@ -192,8 +192,10 @@ export default function HomePage() {
     }
     if (arrondissement) params.set('arr', arrondissement)
 
-    // Quand
-    if (quand === 'now') {
+    // Quand (Danser : clubs ouverts ce soir, l'heure ne compte pas)
+    if (mode === 'danser') {
+      params.set('soir', 'true')
+    } else if (quand === 'now') {
       params.set('openNow', 'true')
     } else {
       const { day, time } = resolveHeure(quand)
@@ -230,7 +232,8 @@ export default function HomePage() {
 
         <div className="flex flex-col gap-7 flex-1">
 
-          {/* Quand */}
+          {/* Quand : seulement pour Boire (Danser = « ouvert ce soir », automatiquement) */}
+          {mode === 'boire' && (
           <section className="fade-up delay-1">
             <Label>{MODE_TEXT[mode].quand}</Label>
             <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
@@ -244,6 +247,7 @@ export default function HomePage() {
               ))}
             </div>
           </section>
+          )}
 
           {/* Où */}
           <section className="fade-up delay-2">

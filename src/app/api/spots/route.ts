@@ -44,6 +44,21 @@ function parisNow(): { day: number; time: number } {
   return { day, time: Number(get('hour')) * 100 + Number(get('minute')) }
 }
 
+// « Ouvert ce soir » (Danser) : ouvert à un moment de la nuit qui vient.
+// En journée : à 23h (ou maintenant si plus tard), puis à 0h, 1h et 2h le lendemain.
+// Déjà en pleine nuit (avant 6h) : maintenant, puis chaque heure jusqu'à 4h.
+type Moment = { day: number; time: number }
+function tonightMoments(): Moment[] {
+  const { day, time } = parisNow()
+  if (time < 600) {
+    const moments: Moment[] = [{ day, time }]
+    for (let h = Math.floor(time / 100) + 1; h <= 4; h++) moments.push({ day, time: h * 100 })
+    return moments
+  }
+  const next = (day + 1) % 7
+  return [{ day, time: Math.max(time, 2300) }, { day: next, time: 0 }, { day: next, time: 100 }, { day: next, time: 200 }]
+}
+
 // ─── Classement ──────────────────────────────────────────────────────────────
 //
 // On ne filtre plus : on classe tous les spots de la catégorie, puis on sert les 3 premiers
@@ -103,6 +118,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const categorie   = searchParams.get('categorie') || 'bar'
   const openNow     = searchParams.get('openNow') === 'true'
+  const soir        = searchParams.get('soir') === 'true'
   const excludeIds  = new Set((searchParams.get('exclude') || '').split(',').filter(Boolean))
   const lat = searchParams.get('lat') ? Number(searchParams.get('lat')) : null
   const lng = searchParams.get('lng') ? Number(searchParams.get('lng')) : null
@@ -118,9 +134,12 @@ export async function GET(req: NextRequest) {
   const openAtDay  = searchParams.get('openAtDay') != null ? Number(searchParams.get('openAtDay')) : null
   const hasOpenAt  = openAtTime != null && openAtDay != null && !Number.isNaN(openAtTime) && !Number.isNaN(openAtDay)
 
-  // Quel moment tester ? (null = pas de filtre d'horaire)
-  const when = hasOpenAt ? { day: openAtDay!, time: openAtTime! } : openNow ? parisNow() : null
-  const isOpen = (s: { horaires?: unknown }) => !when || isOpenAt(s.horaires, when.day, when.time)
+  // Quels moments tester ? (null = pas de filtre d'horaire ; ouvert à l'un d'eux = gardé)
+  const moments: Moment[] | null = hasOpenAt ? [{ day: openAtDay!, time: openAtTime! }]
+    : soir ? tonightMoments()
+    : openNow ? [parisNow()]
+    : null
+  const isOpen = (s: { horaires?: unknown }) => !moments || moments.some(m => isOpenAt(s.horaires, m.day, m.time))
 
   const supabase = createAdminClient()
   const types = TYPES_BY_CATEGORIE[categorie] || TYPES_BY_CATEGORIE['bar']
@@ -143,7 +162,7 @@ export async function GET(req: NextRequest) {
   }
 
   // ── Mode liste : on classe toute la catégorie (requête légère), puis on charge les 3 retenus ──
-  const columns = 'id, arrondissement, budget, coordonnees_lat, coordonnees_lng' + (when ? ', horaires' : '')
+  const columns = 'id, arrondissement, budget, coordonnees_lat, coordonnees_lng' + (moments ? ', horaires' : '')
   const [candRes, photoRes] = await Promise.all([
     supabase.from('spots').select(columns).eq('actif', true).in('type', types).limit(2000),
     // Spots avec une vraie photo (pas vide, pas un lien Google expiré)

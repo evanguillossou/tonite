@@ -45,9 +45,14 @@ function openStatus(periods: Period[] | null): { label: string; open: boolean } 
     const h = Math.floor(openTime / 100), m = openTime % 100
     const days = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam']
     const nextDay = nextPeriod.open.day
-    const dayLabel = nextDay === (day + 1) % 7 ? 'demain' : days[nextDay]
-    const timeLabel = m === 0 ? `${h}h` : `${h}h${String(m).padStart(2,'0')}`
-    return { label: `Fermé · Ouvre ${dayLabel} à ${timeLabel}`, open: false }
+    // « ce soir » pour une ouverture après minuit vue depuis la journée (clubs), rien si c'est plus tard aujourd'hui
+    const tomorrow = nextDay === (day + 1) % 7
+    const dayLabel = nextDay === day && openTime > time ? ''
+      : tomorrow && openTime < 600 && time >= 600 ? 'ce soir '
+      : tomorrow ? 'demain '
+      : `${days[nextDay]} `
+    const timeLabel = h === 0 && m === 0 ? 'minuit' : m === 0 ? `${h}h` : `${h}h${String(m).padStart(2,'0')}`
+    return { label: `Fermé · Ouvre ${dayLabel}à ${timeLabel}`, open: false }
   }
   return { label: 'Fermé', open: false }
 }

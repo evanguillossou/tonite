@@ -90,7 +90,7 @@ const TYPES = [
 export default function SpotsPage() {
   const [spots, setSpots] = useState<Spot[]>([])
   const [loading, setLoading] = useState(true)
-  const [filters, setFilters] = useState({ vibe: '', actif: '', arr: '', budget: '' })
+  const [filters, setFilters] = useState({ vibe: '', actif: '', type: '', arr: '', budget: '' })
   const [search, setSearch] = useState('')
   const [photoFilter, setPhotoFilter] = useState('')
   const [editing, setEditing] = useState<Spot | null>(null)
@@ -104,6 +104,7 @@ export default function SpotsPage() {
     if (filters.vibe === 'non') q = q.eq('vibe_enrichie', false)
     if (filters.actif === 'oui') q = q.eq('actif', true)
     if (filters.actif === 'non') q = q.eq('actif', false)
+    if (filters.type) q = q.eq('type', filters.type)
     if (filters.arr) q = q.eq('arrondissement', Number(filters.arr))
     if (filters.budget) q = q.eq('budget', Number(filters.budget))
     const { data } = await q.limit(500)
@@ -198,6 +199,14 @@ export default function SpotsPage() {
               <option value="">Statut : tous</option>
               <option value="oui">Actif</option>
               <option value="non">Inactif</option>
+            </select>
+            <select
+              value={filters.type}
+              onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+              className="bg-[#141414] border border-[#222] text-[#f5f5f0] text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-[#8B5CF6]"
+            >
+              <option value="">Type : tous</option>
+              {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
             <select
               value={filters.arr}
