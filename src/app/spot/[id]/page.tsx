@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import type { Spot } from '@/types'
 import ThemeLogo from '@/components/ThemeLogo'
+import { isClub, programmationUrl } from '@/lib/clubs'
 
 function budgetLabel(b: number) { return '€'.repeat(b) }
 
@@ -109,6 +110,7 @@ export default function SpotPage() {
   )
 
   const status = openStatus(spot.horaires as Period[] | null)
+  const programmation = programmationUrl(spot)
 
   return (
     <main className="min-h-screen bg-bg flex flex-col max-w-lg mx-auto">
@@ -150,8 +152,12 @@ export default function SpotPage() {
             <h1 className="font-display font-bold text-2xl text-text leading-tight">{spot.nom}</h1>
             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
               <span className="text-muted text-xs font-body">{spot.arrondissement}e arrondissement</span>
-              <span className="text-xs" style={{ color: 'var(--c-soft)' }}>·</span>
-              <span className="text-muted text-xs font-body">{budgetLabel(spot.budget)}</span>
+              {!isClub(spot) && (
+                <>
+                  <span className="text-xs" style={{ color: 'var(--c-soft)' }}>·</span>
+                  <span className="text-muted text-xs font-body">{budgetLabel(spot.budget)}</span>
+                </>
+              )}
             </div>
           </div>
           <span className="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium font-body"
@@ -195,6 +201,19 @@ export default function SpotPage() {
           </div>
         )}
 
+        {/* Programmation (clubs) */}
+        {programmation && (
+          <a
+            href={programmation}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-3.5 rounded-full flex items-center justify-center font-display font-semibold text-sm"
+            style={{ background: 'transparent', color: 'var(--c-ink)', border: '1.5px solid var(--c-ink)' }}
+          >
+            Voir la programmation ↗
+          </a>
+        )}
+
         {/* Boutons */}
         <div className="flex gap-3 mt-2">
           <button
@@ -217,7 +236,7 @@ export default function SpotPage() {
 
         {/* CTA retour accueil */}
         <button
-          onClick={() => router.push('/')}
+          onClick={() => router.push(isClub(spot) ? '/?c=danser' : '/')}
           className="text-center text-muted text-xs font-body mt-2 underline underline-offset-2"
         >
           Trouver d&apos;autres spots ce soir

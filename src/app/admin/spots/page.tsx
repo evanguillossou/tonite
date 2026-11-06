@@ -136,7 +136,7 @@ export default function SpotsPage() {
     if (!editing) return
     setSaving(true)
     const cleanPhotos = (editing.photos || [editing.photo_url || '']).map(p => p?.trim()).filter(Boolean) as string[]
-    await supabase.from('spots').update({
+    const payload: Record<string, unknown> = {
       nom: editing.nom,
       adresse: editing.adresse,
       arrondissement: editing.arrondissement,
@@ -150,8 +150,14 @@ export default function SpotsPage() {
       actif: editing.actif,
       vibe_enrichie: editing.vibe_enrichie,
       horaires: horaireToJson(editingJours),
-    }).eq('id', editing.id)
+    }
+    // Lien programmation (clubs) : envoyé seulement s'il est rempli, ou pour effacer un lien existant
+    const lien = (editing.lien_programmation || '').trim()
+    const before = spots.find(s => s.id === editing.id)?.lien_programmation
+    if (lien || before) payload.lien_programmation = lien || null
+    const { error } = await supabase.from('spots').update(payload).eq('id', editing.id)
     setSaving(false)
+    if (error) { alert(`Enregistrement impossible : ${error.message}`); return }
     setEditing(null)
     loadSpots()
   }
@@ -330,6 +336,17 @@ export default function SpotsPage() {
                 {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </Field>
+
+            {editing.type === 'club' && (
+              <Field label="Lien programmation (clubs) · Shotgun, Resident Advisor, Instagram ou site de la boîte">
+                <input
+                  value={editing.lien_programmation || ''}
+                  onChange={(e) => setEditing({ ...editing, lien_programmation: e.target.value })}
+                  placeholder="https://shotgun.live/venues/…"
+                  className="input-style"
+                />
+              </Field>
+            )}
 
             <Field label="Vibe (1 phrase)">
               <textarea

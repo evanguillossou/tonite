@@ -109,8 +109,8 @@ export async function GET(req: NextRequest) {
   const arrParam = searchParams.get('arr') ? Number(searchParams.get('arr')) : null
   const arr = arrParam && ARR_CENTERS[arrParam] ? arrParam : null
 
-  // Budgets demandés (1-3), CSV ; vide = tous
-  const budgets = (searchParams.get('budget') || '')
+  // Budgets demandés (1-3), CSV ; vide = tous. Clubs : le prix ne compte pas (c'est toujours cher).
+  const budgets = categorie === 'clubbing' ? [] : (searchParams.get('budget') || '')
     .split(',').map(Number).filter(n => n >= 1 && n <= 3)
 
   // Filtre « ouvert à un horaire choisi » : openAt=HHMM & openAtDay=0-6

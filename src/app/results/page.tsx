@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic'
 import type { Spot } from '@/types'
 import ThemeToggle from '@/components/ThemeToggle'
 import ThemeLogo from '@/components/ThemeLogo'
+import { isClub, programmationUrl } from '@/lib/clubs'
 
 // ── Palette DA ────────────────────────────────────────────────
 // Couleurs par rôle (palette de l'accueil) : suivent le thème clair / sombre (globals.css)
@@ -167,6 +168,22 @@ function statusStyle(open: boolean): React.CSSProperties {
     : { color: MUTED }
 }
 
+// Lien vers la programmation d'un club (s'ouvre dans un nouvel onglet)
+function ProgrammationButton({ href }: { href: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      className="w-full py-3.5 rounded-full flex items-center justify-center gap-2 font-display font-semibold text-sm transition-all"
+      style={{ background: 'transparent', color: INK, border: LINE }}
+    >
+      Voir la programmation ↗
+    </a>
+  )
+}
+
 // ── Bottom Sheet ──────────────────────────────────────────────
 function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void }) {
   const distance = spot._distance != null
@@ -250,8 +267,12 @@ function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void 
               <h2 className="font-display font-bold text-xl text-text leading-tight">{spot.nom}</h2>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <span className="text-muted text-xs font-body">{spot.arrondissement}e arr.</span>
-                <span className="text-xs" style={{ color: SOFT }}>·</span>
-                <span className="text-muted text-xs font-body">{budgetLabel(spot.budget)}</span>
+                {!isClub(spot) && (
+                  <>
+                    <span className="text-xs" style={{ color: SOFT }}>·</span>
+                    <span className="text-muted text-xs font-body">{budgetLabel(spot.budget)}</span>
+                  </>
+                )}
                 {distance && (
                   <>
                     <span className="text-xs" style={{ color: SOFT }}>·</span>
@@ -296,6 +317,11 @@ function SpotSheet({ spot, onClose }: { spot: SpotWithDist; onClose: () => void 
                 </span>
               ))}
             </div>
+          )}
+
+          {/* Programmation (clubs) */}
+          {programmationUrl(spot) && (
+            <ProgrammationButton href={programmationUrl(spot) as string} />
           )}
 
           {/* Boutons */}
@@ -408,8 +434,12 @@ function FavsPanel({ favs, onRemove, onClose }: { favs: Spot[]; onRemove: (id: s
                   <h3 className="font-display font-bold text-xl text-text leading-tight">{spot.nom}</h3>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <span className="text-muted text-xs font-body">{spot.arrondissement}e arr.</span>
-                    <span className="text-xs" style={{ color: SOFT }}>·</span>
-                    <span className="text-muted text-xs font-body">{'€'.repeat(spot.budget)}</span>
+                    {!isClub(spot) && (
+                      <>
+                        <span className="text-xs" style={{ color: SOFT }}>·</span>
+                        <span className="text-muted text-xs font-body">{budgetLabel(spot.budget)}</span>
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -456,6 +486,11 @@ function FavsPanel({ favs, onRemove, onClose }: { favs: Spot[]; onRemove: (id: s
                     </span>
                   ))}
                 </div>
+              )}
+
+              {/* Programmation (clubs) */}
+              {programmationUrl(spot) && (
+                <ProgrammationButton href={programmationUrl(spot) as string} />
               )}
 
               {/* CTA */}
@@ -519,8 +554,12 @@ function SpotCard({ spot, index, onTap, isFav, onFavToggle }: {
           <h2 className="font-display font-bold text-lg text-text leading-tight truncate">{spot.nom}</h2>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             <span className="text-muted text-xs font-body">{spot.arrondissement}e arr.</span>
-            <span className="text-xs" style={{ color: SOFT }}>·</span>
-            <span className="text-muted text-xs font-body">{budgetLabel(spot.budget)}</span>
+            {!isClub(spot) && (
+              <>
+                <span className="text-xs" style={{ color: SOFT }}>·</span>
+                <span className="text-muted text-xs font-body">{budgetLabel(spot.budget)}</span>
+              </>
+            )}
             {distance && (
               <>
                 <span className="text-xs" style={{ color: SOFT }}>·</span>
@@ -662,6 +701,8 @@ function ResultsContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchSpots([], openNow) }, [fetchSpots])
 
+  const homeUrl = categorie === 'clubbing' ? '/?c=danser' : '/'
+
   const categorieLabel: Record<string, string> = {
     bar: 'Bar d\'ambiance',
     terrasse: 'En terrasse',
@@ -674,7 +715,7 @@ function ResultsContent() {
 
       {/* Nav : vrai bouton (40 px) sous la zone de sécurité */}
       <div className="grid grid-cols-3 items-center mb-8 fade-in">
-        <button onClick={() => router.push('/')}
+        <button onClick={() => router.push(homeUrl)}
           className="justify-self-start flex items-center gap-1.5 h-10 px-4 rounded-full text-sm font-body font-medium"
           style={{ border: LINE, color: INK }}>
           ← Retour
@@ -691,7 +732,7 @@ function ResultsContent() {
         </h1>
         <p className="text-muted text-xs mt-1 font-body">
           {arr ? `${arr}e arrondissement` : (lat && lng ? 'Près de toi' : 'Paris')}
-          {budget && ` · ${budget.split(',').map((b) => '€'.repeat(Number(b))).join(' / ')}`}
+          {budget && categorie !== 'clubbing' && ` · ${budget.split(',').map((b) => '€'.repeat(Number(b))).join(' / ')}`}
         </p>
       </header>
 
@@ -766,7 +807,7 @@ function ResultsContent() {
         <div className="text-center py-16">
           <p className="text-text font-display font-semibold text-lg mb-2">Aucun spot trouvé</p>
           <p className="text-muted text-sm font-body mb-8">On enrichit notre base chaque semaine.</p>
-          <button onClick={() => router.push('/')} className="text-sm font-body underline underline-offset-2 font-medium" style={{ color: INK }}>
+          <button onClick={() => router.push(homeUrl)} className="text-sm font-body underline underline-offset-2 font-medium" style={{ color: INK }}>
             Changer les critères
           </button>
         </div>

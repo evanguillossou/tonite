@@ -100,6 +100,7 @@ type FormData = {
   note_google: string
   coordonnees_lat: string
   coordonnees_lng: string
+  lien_programmation: string
   horaires: unknown
   actif: boolean
   vibe_enrichie: boolean
@@ -108,7 +109,7 @@ type FormData = {
 const empty: FormData = {
   nom: '', type: 'bar', vibe: '', adresse: '', arrondissement: '',
   budget: '2', energie: '2', tags: '', photos: [''], place_id_google: '',
-  note_google: '', coordonnees_lat: '', coordonnees_lng: '', horaires: null,
+  note_google: '', coordonnees_lat: '', coordonnees_lng: '', lien_programmation: '', horaires: null,
   actif: true, vibe_enrichie: false,
 }
 
@@ -179,6 +180,7 @@ export default function AjouterPage() {
     setError(null)
 
     const cleanPhotos = form.photos.map(p => p.trim()).filter(Boolean)
+    const lien = form.type === 'club' ? form.lien_programmation.trim() : ''
 
     const { error } = await supabase.from('spots').insert({
       nom:             form.nom.trim(),
@@ -199,6 +201,8 @@ export default function AjouterPage() {
       actif:           form.actif,
       vibe_enrichie:   form.vibe_enrichie,
       suggestions_count: 0,
+      // Lien programmation : seulement pour un club, et seulement s'il est rempli
+      ...(lien ? { lien_programmation: lien } : {}),
     })
 
     setSaving(false)
@@ -256,6 +260,17 @@ export default function AjouterPage() {
                 {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </Field>
+
+            {form.type === 'club' && (
+              <Field label="Lien programmation (clubs) · Shotgun, Resident Advisor, Instagram ou site de la boîte">
+                <input
+                  value={form.lien_programmation}
+                  onChange={e => setForm({ ...form, lien_programmation: e.target.value })}
+                  placeholder="https://shotgun.live/venues/…"
+                  className="input-style"
+                />
+              </Field>
+            )}
 
             <Field label="Vibe (1 phrase)">
               <textarea value={form.vibe} onChange={e => setForm({ ...form, vibe: e.target.value })} rows={2} className="input-style resize-none" />

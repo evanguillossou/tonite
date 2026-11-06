@@ -31,6 +31,26 @@ const ON_INK = 'var(--c-on-ink)'
 // Pour réafficher un nouveau message à tout le monde plus tard : changer la clé (v1 → v2).
 const BANNER_KEY = 'tonite_banner_beta_v1'
 
+// Les deux univers : Boire (bars) et Danser (clubs). La catégorie est gardée dans l'adresse
+// (?c=danser) pour que « Retour » depuis les résultats retombe sur le bon onglet.
+type Mode = 'boire' | 'danser'
+const MODES: { id: Mode; label: string }[] = [
+  { id: 'boire', label: 'Boire' },
+  { id: 'danser', label: 'Danser' },
+]
+const MODE_TEXT: Record<Mode, { categorie: string; tagline: string; quand: string }> = {
+  boire: {
+    categorie: 'bar',
+    tagline: "Une sélection de bars où l'on a envie de boire un verre, près de vous, ouverts quand vous voulez.",
+    quand: 'Quand tu veux boire un verre',
+  },
+  danser: {
+    categorie: 'clubbing',
+    tagline: "Une sélection de clubs où l'on a envie de danser, près de vous, ouverts quand vous voulez.",
+    quand: 'Quand tu veux danser',
+  },
+}
+
 function BetaBanner() {
   const [show, setShow] = useState(false)
 
@@ -85,6 +105,20 @@ function BetaBanner() {
 
 export default function HomePage() {
   const router = useRouter()
+
+  const [mode, setMode] = useState<Mode>('boire')
+  // Pas d'animation de la pastille au premier affichage (retour sur l'onglet Danser)
+  const [animate, setAnimate] = useState(false)
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('c') === 'danser') setMode('danser')
+    const t = setTimeout(() => setAnimate(true), 50)
+    return () => clearTimeout(t)
+  }, [])
+
+  function switchMode(m: Mode) {
+    setMode(m)
+    try { window.history.replaceState(null, '', m === 'danser' ? '/?c=danser' : '/') } catch { /* sans importance */ }
+  }
 
   const [geoStatus, setGeoStatus] = useState<'idle' | 'loading' | 'ok' | 'denied' | 'unavailable' | 'https_required'>('idle')
   const [geoError, setGeoError] = useState<string | null>(null)
@@ -151,7 +185,7 @@ export default function HomePage() {
   function handleSubmit() {
     if (!ready) return
     setLoading(true)
-    const params = new URLSearchParams({ categorie: 'bar' })
+    const params = new URLSearchParams({ categorie: MODE_TEXT[mode].categorie })
     if (geoStatus === 'ok' && userLat && userLng) {
       params.set('lat', String(userLat))
       params.set('lng', String(userLng))
@@ -167,8 +201,8 @@ export default function HomePage() {
       params.set('openAtDay', String(day))
     }
 
-    // Budget
-    if (budgets.length > 0) params.set('budget', [...budgets].sort().join(','))
+    // Budget (pas pour les clubs : c'est toujours cher)
+    if (mode === 'boire' && budgets.length > 0) params.set('budget', [...budgets].sort().join(','))
 
     router.push(`/results?${params.toString()}`)
   }
@@ -185,11 +219,12 @@ export default function HomePage() {
         {/* Hero */}
         <header className="fade-in mb-8 text-center">
           <ThemeLogo variant="full" className="mx-auto" style={{ width: 'min(58vw, 210px)', height: 'auto' }} />
-          <h1 className="font-display font-bold" style={{ color: INK, fontSize: 'clamp(1.35rem, 5.2vw, 1.7rem)', lineHeight: 1.15, marginTop: '-0.4rem' }}>
+          <ModeSwitch value={mode} onChange={switchMode} animate={animate} />
+          <h1 className="font-display font-bold" style={{ color: INK, fontSize: 'clamp(1.35rem, 5.2vw, 1.7rem)', lineHeight: 1.15, marginTop: '1.1rem' }}>
             Les meilleurs spots autour de vous
           </h1>
           <p className="text-sm mt-2 font-body leading-relaxed" style={{ color: INK, opacity: 0.72 }}>
-            Une sélection de bars où l&apos;on a envie de boire un verre, près de vous, ouverts quand vous voulez.
+            {MODE_TEXT[mode].tagline}
           </p>
         </header>
 
@@ -197,7 +232,7 @@ export default function HomePage() {
 
           {/* Quand */}
           <section className="fade-up delay-1">
-            <Label>Quand tu veux boire un verre</Label>
+            <Label>{MODE_TEXT[mode].quand}</Label>
             <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
               <Chip selected={quand === 'now'} onClick={() => setQuand('now')}>
                 Maintenant
@@ -276,7 +311,8 @@ export default function HomePage() {
             </div>
           </section>
 
-          {/* Budget */}
+          {/* Budget : pas pour les clubs */}
+          {mode === 'boire' && (
           <section className="fade-up delay-3">
             <Label>Budget <span style={{ opacity: 0.5, letterSpacing: 0 }}>· optionnel</span></Label>
             <div className="grid grid-cols-3 gap-2">
@@ -299,6 +335,7 @@ export default function HomePage() {
               })}
             </div>
           </section>
+          )}
 
         </div>
 
@@ -332,6 +369,53 @@ export default function HomePage() {
 
       </div>
     </main>
+  )
+}
+
+// Pastille unique qui glisse sous l'onglet choisi (marche aussi à 3 onglets : gauche, centre, droite)
+function ModeSwitch({ value, onChange, animate }: { value: Mode; onChange: (m: Mode) => void; animate: boolean }) {
+  const index = Math.max(0, MODES.findIndex((m) => m.id === value))
+  return (
+    <div
+      role="tablist"
+      aria-label="Ce que tu veux faire"
+      className="relative grid mx-auto rounded-full p-1"
+      style={{
+        gridTemplateColumns: `repeat(${MODES.length}, 1fr)`,
+        width: 'min(100%, 260px)',
+        // Le logo (image carrée) a du vide sous le mot « TONITE » : on remonte la pastille d'autant
+        marginTop: 'calc(min(58vw, 210px) * -0.28)',
+        background: SURFACE,
+        border: `1.5px solid ${INK}`,
+      }}
+    >
+      <span
+        aria-hidden
+        className="absolute top-1 bottom-1 left-1 rounded-full"
+        style={{
+          width: `calc((100% - 0.5rem) / ${MODES.length})`,
+          transform: `translateX(${index * 100}%)`,
+          transition: animate ? 'transform 320ms cubic-bezier(0.32,0.72,0,1)' : 'none',
+          background: ACCENT,
+          border: `1.5px solid ${INK}`,
+        }}
+      />
+      {MODES.map((m) => {
+        const sel = m.id === value
+        return (
+          <button
+            key={m.id}
+            role="tab"
+            aria-selected={sel}
+            onClick={() => onChange(m.id)}
+            className="relative z-10 py-2.5 rounded-full text-sm font-display font-semibold"
+            style={{ color: sel ? ON_ACCENT : INK, transition: 'color 200ms ease' }}
+          >
+            {m.label}
+          </button>
+        )
+      })}
+    </div>
   )
 }
 

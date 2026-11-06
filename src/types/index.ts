@@ -15,6 +15,8 @@ export type Spot = {
   place_id_google: string | null
   photo_url: string | null
   photos: string[] | null
+  // Clubs uniquement : lien vers la programmation (Shotgun, RA, site de la boîte…)
+  lien_programmation?: string | null
   actif: boolean
   vibe_enrichie: boolean
   suggestions_count: number
