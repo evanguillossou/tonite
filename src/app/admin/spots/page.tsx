@@ -90,7 +90,7 @@ const TYPES = [
 export default function SpotsPage() {
   const [spots, setSpots] = useState<Spot[]>([])
   const [loading, setLoading] = useState(true)
-  const [filters, setFilters] = useState({ vibe: '', actif: '', arr: '' })
+  const [filters, setFilters] = useState({ vibe: '', actif: '', arr: '', budget: '' })
   const [search, setSearch] = useState('')
   const [photoFilter, setPhotoFilter] = useState('')
   const [editing, setEditing] = useState<Spot | null>(null)
@@ -105,6 +105,7 @@ export default function SpotsPage() {
     if (filters.actif === 'oui') q = q.eq('actif', true)
     if (filters.actif === 'non') q = q.eq('actif', false)
     if (filters.arr) q = q.eq('arrondissement', Number(filters.arr))
+    if (filters.budget) q = q.eq('budget', Number(filters.budget))
     const { data } = await q.limit(500)
     setSpots((data as Spot[]) || [])
     setLoading(false)
@@ -203,6 +204,16 @@ export default function SpotsPage() {
               ))}
             </select>
             <select
+              value={filters.budget}
+              onChange={(e) => setFilters({ ...filters, budget: e.target.value })}
+              className="bg-[#141414] border border-[#222] text-[#f5f5f0] text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-[#8B5CF6]"
+            >
+              <option value="">Prix : tous</option>
+              <option value="1">€</option>
+              <option value="2">€€</option>
+              <option value="3">€€€</option>
+            </select>
+            <select
               value={photoFilter}
               onChange={(e) => setPhotoFilter(e.target.value)}
               className="bg-[#141414] border border-[#222] text-[#f5f5f0] text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-[#8B5CF6]"
@@ -223,6 +234,7 @@ export default function SpotsPage() {
                     <th className="text-left py-3 pr-4 font-medium">Nom</th>
                     <th className="text-left py-3 pr-4 font-medium">Type</th>
                     <th className="text-left py-3 pr-4 font-medium">Arr.</th>
+                    <th className="text-left py-3 pr-4 font-medium">Prix</th>
                     <th className="text-left py-3 pr-4 font-medium">Photo</th>
                     <th className="text-left py-3 pr-4 font-medium">Vibe</th>
                     <th className="text-left py-3 pr-4 font-medium">Actif</th>
@@ -235,6 +247,7 @@ export default function SpotsPage() {
                       <td className="py-3 pr-4 text-[#f5f5f0] font-medium max-w-[180px] truncate">{spot.nom}</td>
                       <td className="py-3 pr-4 text-[#888]">{spot.type}</td>
                       <td className="py-3 pr-4 text-[#888]">{spot.arrondissement}e</td>
+                      <td className="py-3 pr-4 text-[#888] whitespace-nowrap">{spot.budget ? '€'.repeat(spot.budget) : '–'}</td>
                       <td className="py-3 pr-4">
                         {!spot.photo_url
                           ? <span className="text-[#333]">–</span>
