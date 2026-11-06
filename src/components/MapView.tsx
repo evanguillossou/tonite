@@ -206,7 +206,7 @@ export default function MapView({
     return (
       <div className="flex items-center justify-center h-full text-center px-8">
         <p className="text-muted text-sm font-body">
-          Carte indisponible — clé Mapbox manquante.
+          Carte indisponible pour le moment.
         </p>
       </div>
     )

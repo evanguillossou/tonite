@@ -189,7 +189,7 @@ export default function HomePage() {
             Les meilleurs spots autour de vous
           </h1>
           <p className="text-sm mt-2 font-body leading-relaxed" style={{ color: INK, opacity: 0.72 }}>
-            Une sélection de bars où l&apos;on a envie de boire un verre — près de vous, ouverts quand vous voulez.
+            Une sélection de bars où l&apos;on a envie de boire un verre, près de vous, ouverts quand vous voulez.
           </p>
         </header>
 

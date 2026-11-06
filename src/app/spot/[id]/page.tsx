@@ -83,7 +83,7 @@ export default function SpotPage() {
   async function handleShare() {
     if (!spot) return
     const url = `${window.location.origin}/spot/${spot.id}`
-    const text = `${spot.nom} — ${spot.vibe || spot.type}, ${spot.arrondissement}e arr.`
+    const text = `${spot.nom} · ${spot.vibe || spot.type} · ${spot.arrondissement}e arr.`
     if (navigator.share) {
       await navigator.share({ title: spot.nom, text, url })
     } else {

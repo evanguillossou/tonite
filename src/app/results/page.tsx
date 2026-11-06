@@ -147,7 +147,7 @@ type SpotWithDist = Spot & { _distance?: number }
 
 async function shareSpot(spot: Spot) {
   const url = `${window.location.origin}/spot/${spot.id}`
-  const text = `${spot.nom} — ${spot.vibe || spot.type}, ${spot.arrondissement}e arr.`
+  const text = `${spot.nom} · ${spot.vibe || spot.type} · ${spot.arrondissement}e arr.`
   if (navigator.share) {
     await navigator.share({ title: spot.nom, text, url })
   } else {

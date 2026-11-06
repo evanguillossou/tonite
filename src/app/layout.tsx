@@ -15,7 +15,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Tonite — Paris Nightlife',
+  title: 'Tonite · Paris Nightlife',
   description: 'Découvre les meilleurs spots nightlife à Paris selon ton mood.',
   manifest: '/manifest.json',
   // Favicon & apple-touch-icon gérés par la convention App Router :

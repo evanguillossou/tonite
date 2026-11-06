@@ -1,7 +1,7 @@
 {
   "name": "Tonite",
   "short_name": "Tonite",
-  "description": "Paris Nightlife — trouve ton spot ce soir",
+  "description": "Paris Nightlife · trouve ton spot ce soir",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F4BCD8",
